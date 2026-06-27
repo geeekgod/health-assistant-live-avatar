@@ -200,7 +200,7 @@ function CallUI({
         </div>
       )}
 
-      <section className="relative h-[45vh] shrink-0 overflow-hidden border-b-2 border-foreground bg-secondary lg:h-full lg:w-[58%] lg:border-b-0 lg:border-r-2">
+      <section className="relative h-[45vh] shrink-0 overflow-hidden border-b-2 border-foreground bg-background lg:h-full lg:w-[58%] lg:border-b-0 lg:border-r-2">
         <AvatarVideo templateName="Healthcare Front Desk" />
       </section>
 

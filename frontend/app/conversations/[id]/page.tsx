@@ -105,7 +105,7 @@ function BriefSummaryCard({ data }: { data: SummaryResponse }) {
   )
 }
 
-function RecordingSection({ data }: { data: SummaryResponse }) {
+function RecordingSection({ data, waiting }: { data: SummaryResponse; waiting?: boolean }) {
   const src = recordingSrc(data.recording_url)
 
   return (
@@ -121,6 +121,8 @@ function RecordingSection({ data }: { data: SummaryResponse }) {
           <audio controls preload="metadata" className="w-full" src={src}>
             Your browser does not support audio playback.
           </audio>
+        ) : waiting ? (
+          <p className="text-sm text-muted-foreground">Processing call recording…</p>
         ) : (
           <p className="text-sm text-muted-foreground">
             No recording was captured for this call.
@@ -279,6 +281,7 @@ export default function ConversationDetailPage({ params }: { params: Promise<{ i
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [data, setData] = useState<SummaryResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [waitingForRecording, setWaitingForRecording] = useState(false)
 
   useEffect(() => {
     void params.then((p) => setSessionId(p.id))
@@ -289,11 +292,14 @@ export default function ConversationDetailPage({ params }: { params: Promise<{ i
 
     let cancelled = false
     let attempts = 0
-    const maxAttempts = 30
+    const maxAttempts = 60
 
     const poll = async () => {
       if (cancelled || attempts >= maxAttempts) {
-        if (!cancelled) setError('Summary generation timed out.')
+        if (!cancelled) {
+          setWaitingForRecording(false)
+          setError((prev) => prev ?? 'Timed out waiting for conversation data.')
+        }
         return
       }
       attempts++
@@ -303,9 +309,32 @@ export default function ConversationDetailPage({ params }: { params: Promise<{ i
         if (cancelled) return
         setData(response)
 
-        if (response.summary_status === 'ready') return
         if (response.summary_status === 'error') {
           setError('Summary generation failed.')
+          setWaitingForRecording(false)
+          return
+        }
+
+        const summaryDone = response.summary_status === 'ready'
+        const sessionEnded = response.status === 'ended'
+        const hasRecording = response.recording_available
+
+        if (summaryDone && hasRecording) {
+          setWaitingForRecording(false)
+          return
+        }
+
+        if (summaryDone && sessionEnded && !hasRecording) {
+          setWaitingForRecording(true)
+        }
+
+        if (summaryDone && sessionEnded && !hasRecording && attempts >= 45) {
+          setWaitingForRecording(false)
+          return
+        }
+
+        if (summaryDone && !sessionEnded) {
+          setWaitingForRecording(false)
           return
         }
       } catch {
@@ -352,7 +381,7 @@ export default function ConversationDetailPage({ params }: { params: Promise<{ i
                 </p>
               )}
               <BriefSummaryCard data={data} />
-              <RecordingSection data={data} />
+              <RecordingSection data={data} waiting={waitingForRecording} />
               <TranscriptSection transcript={data.transcript} />
               <ToolTimeline events={data.tool_events} />
               {data.summary_json && <StructuredFields summary={data.summary_json} />}

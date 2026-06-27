@@ -81,8 +81,7 @@ export default function AvatarVideo({ fallback, templateName }: AvatarVideoProps
     }
 
     const onActiveSpeakers = (speakers: Participant[]) => {
-      const localId = room.localParticipant.identity
-      setIsSpeaking(speakers.some((s) => s.identity !== localId))
+      setIsSpeaking(speakers.some((s) => isAvatarParticipant(s)))
     }
 
     const onParticipantConnected = (participant: Participant) => {
@@ -115,8 +114,14 @@ export default function AvatarVideo({ fallback, templateName }: AvatarVideoProps
         autoPlay
         playsInline
         muted
-        className={`absolute inset-0 z-10 m-auto max-h-[calc(100%-3rem)] max-w-[calc(100%-3rem)] rounded-base border-2 border-foreground bg-secondary object-contain shadow-brutal transition-opacity duration-500 ${
+        className={`absolute inset-0 z-10 m-auto h-full w-full rounded-base border-2 object-contain transition-all duration-300 ${
           hasVideo ? 'opacity-100' : 'pointer-events-none opacity-0'
+        } ${
+          hasVideo && isSpeaking
+            ? 'border-foreground bg-transparent shadow-brutal'
+            : hasVideo
+              ? 'border-foreground/40 bg-transparent shadow-none'
+              : 'border-foreground bg-secondary'
         }`}
       />
 
@@ -131,13 +136,7 @@ export default function AvatarVideo({ fallback, templateName }: AvatarVideoProps
           </div>
           <p className="max-w-sm text-center text-sm font-bold">{status || 'Voice assistant active'}</p>
         </div>
-      ) : (
-        <div
-          className={`pointer-events-none absolute inset-6 rounded-base border-2 border-foreground transition-all duration-500 md:inset-10 ${
-            isSpeaking ? 'opacity-100 shadow-brutal' : 'opacity-40'
-          }`}
-        />
-      )}
+      ) : null}
 
       {templateName && (
         <Badge variant="secondary" className="absolute bottom-4 left-4 z-20">

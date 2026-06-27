@@ -3,7 +3,9 @@ import logging
 import os
 import re
 import asyncio
+import shutil
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import httpx
 from dotenv import load_dotenv
@@ -25,6 +27,7 @@ from .avatar import start_avatar
 from .gemini_tts import GeminiTTS
 
 _ROOT = os.path.join(os.path.dirname(__file__), "..", "..")
+RECORDINGS_DIR = os.path.join(_ROOT, "backend", "recordings")
 load_dotenv()
 load_dotenv(os.path.join(_ROOT, ".env"))
 load_dotenv(os.path.join(_ROOT, "backend", ".env"))
@@ -481,16 +484,15 @@ class HealthAssistantAgent(Agent):
             pass
         return result_str
 
-async def _upload_recording(session_id: str, path: str) -> None:
-    with open(path, "rb") as handle:
-        data = handle.read()
-    async with httpx.AsyncClient(timeout=120.0) as client:
-        response = await client.post(
-            f"{BACKEND_URL.rstrip('/')}/api/sessions/{session_id}/recording",
-            files={"file": (os.path.basename(path), data, "audio/ogg")},
-            headers={"Authorization": f"Bearer {WORKER_API_SECRET}"},
-        )
-        response.raise_for_status()
+async def _save_recording(session_id: str, path: str) -> None:
+    src = Path(path)
+    if not src.exists() or src.stat().st_size < 100:
+        raise ValueError(f"Recording missing or too short: {path}")
+
+    os.makedirs(RECORDINGS_DIR, exist_ok=True)
+    dest = os.path.join(RECORDINGS_DIR, f"{session_id}.ogg")
+    shutil.copy2(src, dest)
+    logger.info("Saved session recording to %s (%d bytes)", dest, os.path.getsize(dest))
 
 
 async def on_session_end(ctx: JobContext) -> None:
@@ -500,10 +502,9 @@ async def on_session_end(ctx: JobContext) -> None:
         report = ctx.make_session_report()
         audio_path = report.audio_recording_path
         if audio_path and audio_path.exists():
-            await _upload_recording(session_id, str(audio_path))
-            logger.info("Uploaded session recording for %s", session_id)
+            await _save_recording(session_id, str(audio_path))
     except Exception as exc:
-        logger.warning("Failed to upload session recording for %s: %s", session_id, exc)
+        logger.warning("Failed to save session recording for %s: %s", session_id, exc)
 
 
 @server.rtc_session(agent_name="health-assistant", on_session_end=on_session_end)
@@ -626,7 +627,7 @@ async def entrypoint(ctx: JobContext) -> None:
         agent=agent,
         room=ctx.room,
         room_input_options=RoomInputOptions(text_enabled=True),
-        record=True,
+        record={"audio": True, "traces": False, "logs": False, "transcript": False},
     )
 
 
