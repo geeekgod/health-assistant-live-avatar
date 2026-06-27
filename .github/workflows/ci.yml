@@ -18,6 +18,8 @@ jobs:
 
       - name: Validate Docker Compose files
         run: |
+          # .env is gitignored; CI uses .env.example for compose validation only
+          cp docker/.env.example docker/.env
           docker compose -f docker/compose.yml --profile cloud config --quiet
           docker compose -f docker/compose.yml -f docker/compose.deploy.yml --profile cloud config --quiet
 
