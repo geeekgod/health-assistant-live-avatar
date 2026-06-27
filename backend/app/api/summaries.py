@@ -2,8 +2,10 @@ import json
 import logging
 import os
 from datetime import datetime, timezone
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
@@ -15,6 +17,7 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "..", "templates")
+RECORDINGS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "recordings")
 
 DEFAULT_SUMMARY_FIELDS = [
     "identified_user",
@@ -34,6 +37,67 @@ def _load_template_data(template_id: str) -> dict:
     except Exception as e:
         logger.warning(f"Failed to load template {template_id}: {e}")
     return {}
+
+def _find_recording_path(session_id: str) -> str | None:
+    for ext in (".wav", ".mp3"):
+        path = os.path.join(RECORDINGS_DIR, f"{session_id}{ext}")
+        if os.path.isfile(path):
+            return path
+    return None
+
+def _brief_summary(summary_json: dict[str, Any] | None) -> str | None:
+    if not summary_json:
+        return None
+    parts: list[str] = []
+    if name := summary_json.get("patient_name"):
+        parts.append(str(name))
+    if complaint := summary_json.get("chief_complaint"):
+        parts.append(f"— {complaint}")
+    date = summary_json.get("appointment_date")
+    time = summary_json.get("appointment_time")
+    if date:
+        appt = f"Appt {date}"
+        if time:
+            appt += f" at {time}"
+        parts.append(appt)
+    return " · ".join(parts) if parts else None
+
+def _serialize_tool_events(events) -> list[dict]:
+    return [
+        {
+            "tool_name": e.tool_name,
+            "status": e.status,
+            "args": e.args,
+            "result": e.result,
+            "timestamp": e.timestamp.isoformat() if e.timestamp else None,
+        }
+        for e in events
+    ]
+
+async def _session_detail(db_session: CallSession, db: AsyncSession) -> dict:
+    events_query = await db.execute(
+        select(ToolEvent)
+        .where(ToolEvent.session_id == db_session.id)
+        .order_by(ToolEvent.timestamp)
+    )
+    events = events_query.scalars().all()
+    recording_path = _find_recording_path(db_session.id)
+    summary_json = db_session.summary_json or {}
+
+    return {
+        "session_id": db_session.id,
+        "template_id": db_session.template_id,
+        "status": db_session.status,
+        "summary_status": db_session.summary_status,
+        "summary_json": db_session.summary_json,
+        "brief_summary": _brief_summary(summary_json if db_session.summary_status == "ready" else None),
+        "started_at": db_session.started_at.isoformat() if db_session.started_at else None,
+        "ended_at": db_session.ended_at.isoformat() if db_session.ended_at else None,
+        "transcript": db_session.transcript_json or [],
+        "tool_events": _serialize_tool_events(events),
+        "recording_available": recording_path is not None,
+        "recording_url": f"/api/sessions/{db_session.id}/recording" if recording_path else None,
+    }
 
 async def generate_summary_with_llm(session_id: str, db: AsyncSession) -> dict:
     session_query = await db.execute(select(CallSession).where(CallSession.id == session_id))
@@ -123,10 +187,18 @@ async def get_summary(session_id: str, db: AsyncSession = Depends(get_db)):
         session_query = await db.execute(select(CallSession).where(CallSession.id == session_id))
         db_session = session_query.scalar_one_or_none()
 
-    return {
-        "session_id": db_session.id,
-        "template_id": db_session.template_id,
-        "status": db_session.status,
-        "summary_status": db_session.summary_status,
-        "summary_json": db_session.summary_json,
-    }
+    return await _session_detail(db_session, db)
+
+
+@router.get("/sessions/{session_id}/recording")
+async def get_session_recording(session_id: str, db: AsyncSession = Depends(get_db)):
+    session_query = await db.execute(select(CallSession).where(CallSession.id == session_id))
+    if not session_query.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    recording_path = _find_recording_path(session_id)
+    if not recording_path:
+        raise HTTPException(status_code=404, detail="No recording available for this session")
+
+    media_type = "audio/wav" if recording_path.endswith(".wav") else "audio/mpeg"
+    return FileResponse(recording_path, media_type=media_type, filename=os.path.basename(recording_path))

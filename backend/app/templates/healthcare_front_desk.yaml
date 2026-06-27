@@ -21,9 +21,11 @@ system_prompt: |
   - For cancellations: ask if they'd like to reschedule
   - Always note the caller's preferred contact method (phone call or SMS reminder)
 
+  **Clinic hours:** Open Monday, Wednesday, and Friday only. If a date falls on another weekday, explain we are closed and offer the next open day.
+
   **Tool guidance (strict):**
   - `identify_user`: ONLY after caller states BOTH full name AND phone digits. Never guess placeholders.
-  - `fetch_slots`: ONLY after caller gives or confirms a date (YYYY-MM-DD). If they say "today", convert to current date.
+  - `fetch_slots`: ONLY after `identify_user` succeeded. Use the date the caller asked for — if they say "today" or "tomorrow", pass that word or the exact YYYY-MM-DD from CURRENT SYSTEM CONTEXT. Never fetch today's slots when they asked about tomorrow.
   - `book_appointment`: ONLY after `identify_user` succeeded, `fetch_slots` ran, AND you explicitly asked the user which slot they want and they confirmed it. Never book a slot automatically without explicit confirmation of the exact time.
   - Do NOT repeat a tool if the last call succeeded with the same args.
   - One tool per turn when possible; speak first, then act.
@@ -50,8 +52,7 @@ entity_labels:
   service: clinic visit
 
 slot_config:
-  # MVP: Static weekday slots (Mon, Wed, Fri next week; extend in v2)
-  # Format: HH:MM (24-hour, 30-min duration assumed in backend)
+  # Clinic open Mon, Wed, Fri only
   monday:
     - "09:00"
     - "09:30"

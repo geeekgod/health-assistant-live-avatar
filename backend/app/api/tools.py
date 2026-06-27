@@ -31,15 +31,34 @@ def _load_template_data(template_id: str) -> dict:
         pass
     return {}
 
-def _slots_for_date(template_data: dict, date_str: str) -> list[str]:
-    slot_config = template_data.get("slot_config")
-    if not slot_config: return DEFAULT_SLOTS
+def _slots_for_date(template_data: dict, date_str: str) -> tuple[list[str], str]:
+    """Return (slots, weekday_name) for a date. Empty slots means clinic closed that day."""
     try:
-        weekday = dt.datetime.strptime(date_str, "%Y-%m-%d").strftime("%A").lower()
+        weekday = dt.datetime.strptime(date_str, "%Y-%m-%d").strftime("%A")
+        weekday_key = weekday.lower()
     except ValueError:
-        return DEFAULT_SLOTS
-    slots = slot_config.get(weekday)
-    return list(slots) if slots else DEFAULT_SLOTS
+        return DEFAULT_SLOTS, ""
+
+    slot_config = template_data.get("slot_config")
+    if not slot_config:
+        return DEFAULT_SLOTS, weekday
+
+    slots = slot_config.get(weekday_key)
+    if slots is None:
+        return [], weekday
+    return list(slots), weekday
+
+
+def _resolve_date_str(date_str: str | None, local_now: dt.datetime) -> str:
+    local_today = local_now.strftime("%Y-%m-%d")
+    if not date_str:
+        return local_today
+    normalized = date_str.strip().lower()
+    if normalized == "today":
+        return local_today
+    if normalized == "tomorrow":
+        return (local_now + dt.timedelta(days=1)).strftime("%Y-%m-%d")
+    return date_str.strip()
 
 class ToolExecuteRequest(BaseModel):
     session_id: str
@@ -81,15 +100,12 @@ async def execute_tool(
         result = {"contact_id": contact.id, "name": contact.name, "message": "User identified"}
 
     elif req.tool_name == "fetch_slots":
-        date_str = req.args.get("date")
         local_now = dt.datetime.now()
+        date_str = _resolve_date_str(req.args.get("date"), local_now)
         local_today = local_now.strftime("%Y-%m-%d")
 
-        if date_str and date_str.lower() == "today":
-            date_str = local_today
-
         template_data = _load_template_data(db_session.template_id)
-        all_slots = _slots_for_date(template_data, date_str)
+        all_slots, weekday_name = _slots_for_date(template_data, date_str)
 
         query = await db.execute(select(Booking).where(
             Booking.template_id == db_session.template_id, Booking.date == date_str, Booking.status == "active"
@@ -98,13 +114,21 @@ async def execute_tool(
 
         available = []
         for s in all_slots:
-            if s in booked: continue
+            if s in booked:
+                continue
             if date_str == local_today:
                 if dt.datetime.strptime(s, "%H:%M").time() <= local_now.time():
                     continue
             available.append(dt.datetime.strptime(s, "%H:%M").strftime("%I:%M %p").lstrip("0"))
 
         result = {"date": date_str, "available_slots": available}
+        if not all_slots and weekday_name:
+            result["message"] = (
+                f"The clinic is closed on {weekday_name}s. "
+                "We are open Monday, Wednesday, and Friday."
+            )
+        elif not available and all_slots:
+            result["message"] = "All slots are booked for this date."
 
     elif req.tool_name == "book_appointment":
         if key := req.args.get("idempotency_key"):

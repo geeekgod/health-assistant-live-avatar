@@ -3,7 +3,7 @@ import logging
 import os
 import re
 import asyncio
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import httpx
 from dotenv import load_dotenv
@@ -179,6 +179,16 @@ _INVALID_IDENTIFY_MARKERS = (
 _FAKE_PHONES = frozenset({"1234567890", "0000000000", "1111111111", "9999999999"})
 
 
+def _normalize_slot_date(date: str) -> str:
+    now = datetime.now()
+    normalized = (date or "").strip().lower()
+    if normalized == "today":
+        return now.strftime("%Y-%m-%d")
+    if normalized == "tomorrow":
+        return (now + timedelta(days=1)).strftime("%Y-%m-%d")
+    return (date or "").strip()
+
+
 def _normalize_phone(phone: str) -> str:
     return re.sub(r"\D", "", (phone or "").strip())
 
@@ -338,12 +348,12 @@ class HealthAssistantAgent(Agent):
 
     @function_tool
     async def fetch_slots(self, context: RunContext, date: str) -> str:
-        """Fetch available appointment slots for a given date (YYYY-MM-DD).
+        """Fetch available appointment slots for a given date.
 
         Args:
-            date: Date to check in YYYY-MM-DD format
+            date: "today", "tomorrow", or YYYY-MM-DD (use the date the caller asked for)
         """
-        return await self._run_tool("fetch_slots", {"date": date})
+        return await self._run_tool("fetch_slots", {"date": _normalize_slot_date(date)})
 
     @function_tool
     async def book_appointment(
@@ -445,10 +455,13 @@ async def entrypoint(ctx: JobContext) -> None:
     system_prompt = agent_config.get("system_prompt") or DEFAULT_SYSTEM_PROMPT
 
     now = datetime.now()
+    tomorrow = (now + timedelta(days=1)).strftime("%Y-%m-%d")
     current_context = (
         f"\n\nCURRENT SYSTEM CONTEXT:\n"
-        f"- Current Date: {now.strftime('%Y-%m-%d')}\n"
+        f"- Current Date (today): {now.strftime('%Y-%m-%d')}\n"
+        f"- Tomorrow's Date: {tomorrow}\n"
         f"- Current Time: {now.strftime('%H:%M')}\n"
+        f"- Clinic open days: Monday, Wednesday, Friday only\n"
     )
 
     system_prompt += current_context + (
@@ -458,7 +471,9 @@ async def entrypoint(ctx: JobContext) -> None:
         "Do not type the tool execution as text.\n"
         "2. Never guess or invent tool arguments (like name or phone). Ask the user if missing.\n"
         "3. NEVER auto-select a booking time. You MUST list available slots and WAIT for the user to explicitly choose one before calling book_appointment.\n"
-        "4. NEVER call end_conversation in the same turn as book_appointment, modify_appointment, or cancel_appointment. "
+        "4. NEVER call fetch_slots for today unless the caller asked about today. "
+        "When they ask about tomorrow, call fetch_slots with date \"tomorrow\" or tomorrow's YYYY-MM-DD from context.\n"
+        "5. NEVER call end_conversation in the same turn as book_appointment, modify_appointment, or cancel_appointment. "
         "First ask if the caller needs anything else; only call end_conversation after they clearly confirm they are done."
     )
     greeting = agent_config.get("greeting")
