@@ -1,10 +1,10 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 
 from app.api import sessions, tools, summaries
-from app.config import settings
-from app.db.database import init_db
+from app.db.database import engine, init_db
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -28,3 +28,18 @@ app.include_router(summaries.router, prefix="/api")
 @app.get("/")
 async def root():
     return {"message": "Health Assistant Backend is running"}
+
+
+@app.get("/health")
+async def health_liveness():
+    return {"status": "ok"}
+
+
+@app.get("/health/ready")
+async def health_readiness():
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+    except Exception:
+        raise HTTPException(status_code=503, detail="database unavailable")
+    return {"status": "ready"}

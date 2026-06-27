@@ -1,4 +1,4 @@
-.PHONY: dev dev-backend dev-frontend dev-agent docker-build docker-up docker-down docker-logs docker-ps help
+.PHONY: dev dev-backend dev-frontend dev-agent docker-build docker-up docker-down docker-logs docker-ps deploy help
 
 # Docker: LIVEKIT=local|cloud|off  DETACH=1 for background
 LIVEKIT ?= local
@@ -37,6 +37,9 @@ docker-logs:
 docker-ps:
 	LIVEKIT=$(LIVEKIT) $(DOCKER_SCRIPT) ps
 
+deploy:
+	LIVEKIT=$(LIVEKIT) bash docker/scripts/deploy.sh
+
 help:
 	@echo ""
 	@echo "Available make targets:"
@@ -49,5 +52,6 @@ help:
 	@echo "  docker-down    Stop all containers"
 	@echo "  docker-logs    Show logs for all containers"
 	@echo "  docker-ps      Show status of all containers"
+	@echo "  deploy         Blue-green production deploy (LIVEKIT=cloud)"
 	@echo "  help           Show this help message"
 	@echo ""

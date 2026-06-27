@@ -20,7 +20,7 @@ ENV PYTHONUNBUFFERED=1 \
     TZ=Asia/Kolkata
 WORKDIR /app
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libglib2.0-0 gosu tzdata \
+    && apt-get install -y --no-install-recommends libglib2.0-0 gosu tzdata procps \
     && ln -sf /usr/share/zoneinfo/Asia/Kolkata /etc/localtime \
     && echo "Asia/Kolkata" > /etc/timezone \
     && rm -rf /var/lib/apt/lists/* \

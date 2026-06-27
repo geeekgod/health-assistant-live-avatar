@@ -35,6 +35,7 @@ case "${1:-}" in
   up)
     if [[ "$DETACH" == "1" ]]; then
       compose up -d "${@:2}"
+      bash "$(dirname "$0")/autoheal.sh"
     else
       compose up "${@:2}"
     fi

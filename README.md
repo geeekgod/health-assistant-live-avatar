@@ -65,3 +65,16 @@ Open **http://localhost:3000** (frontend) and **http://localhost:8000/docs** (AP
 - `NEXT_PUBLIC_API_URL` is baked in at frontend **build** time — rebuild after changing it.
 - Browser clients use `LIVEKIT_URL` from `docker/.env`; the agent uses `LIVEKIT_INTERNAL_URL` (`ws://livekit:7880` when local).
 - Recordings and SQLite DB persist in Docker volumes (`recordings`, `app-data`).
+- **Health:** backend `GET /health` (liveness) and `GET /health/ready` (DB check); frontend `GET /api/health`.
+- **Autoheal:** `docker/scripts/autoheal.sh` runs a singleton container that restarts unhealthy labelled services.
+
+## CI/CD (GitHub Actions)
+
+| Workflow | Trigger | Purpose |
+|----------|---------|---------|
+| `ci.yml` | PR / push to `main` | Validate compose + build images |
+| `deploy.yml` | Push to `main` | SSH deploy with blue-green Docker |
+
+Production path: `/var/www/mykare-assessment/health-assistant-live-avatar`
+
+See **[docs/DEPLOY.md](docs/DEPLOY.md)** for SSH key setup, GitHub secrets, and server bootstrap.

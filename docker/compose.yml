@@ -5,10 +5,28 @@ name: health-assistant
 x-timezone: &timezone
   TZ: Asia/Kolkata
 
+x-autoheal-labels: &autoheal-labels
+  autoheal: "true"
+
+x-backend-healthcheck: &backend-healthcheck
+  test:
+    [
+      "CMD",
+      "python",
+      "-c",
+      "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready')",
+    ]
+  interval: 15s
+  timeout: 5s
+  retries: 3
+  start_period: 20s
+
 services:
   livekit:
     image: livekit/livekit-server:latest
     profiles: [self-hosted]
+    labels:
+      <<: *autoheal-labels
     environment:
       <<: *timezone
     command: --config /etc/livekit.yaml --dev
@@ -18,12 +36,20 @@ services:
     volumes:
       - ./livekit.yaml:/etc/livekit.yaml:ro
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:7880/ || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
 
   backend:
     build:
       context: ..
       dockerfile: docker/backend/Dockerfile
     profiles: [self-hosted, cloud, core]
+    labels:
+      <<: *autoheal-labels
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     env_file:
@@ -43,17 +69,15 @@ services:
         required: false
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/docs')"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
+      <<: *backend-healthcheck
 
   agent:
     build:
       context: ..
       dockerfile: docker/agent/Dockerfile
     profiles: [self-hosted, cloud]
+    labels:
+      <<: *autoheal-labels
     env_file:
       - .env
     environment:
@@ -67,6 +91,12 @@ services:
       backend:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'livekit_worker.worker' >/dev/null"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
 
   frontend:
     build:
@@ -75,6 +105,8 @@ services:
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     profiles: [self-hosted, cloud, core]
+    labels:
+      <<: *autoheal-labels
     environment:
       <<: *timezone
     ports:
@@ -83,6 +115,18 @@ services:
       backend:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
 volumes:
   app-data:

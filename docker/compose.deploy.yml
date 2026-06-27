@@ -1,0 +1,19 @@
+# Overlay for production blue-green deploys.
+# Shared volumes persist across blue/green compose project switches.
+services:
+  backend:
+    volumes:
+      - app-data:/data
+      - recordings:/data/recordings
+
+  agent:
+    volumes:
+      - recordings:/data/recordings
+
+volumes:
+  app-data:
+    external: true
+    name: health-assistant-app-data
+  recordings:
+    external: true
+    name: health-assistant-recordings
