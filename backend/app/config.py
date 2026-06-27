@@ -1,8 +1,7 @@
-from pydantic import model_validator
-from pydantic_settings import BaseSettings
-from typing import Self
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
     # Providers
     GROQ_API_KEY: str = ""
     DEEPGRAM_API_KEY: str = ""
@@ -27,8 +26,5 @@ class Settings(BaseSettings):
         if self.LIVEKIT_HTTP_URL:
             return self.LIVEKIT_HTTP_URL
         return self.LIVEKIT_URL.replace("ws://", "http://").replace("wss://", "https://")
-
-    class Config:
-        env_file = ".env"
 
 settings = Settings()

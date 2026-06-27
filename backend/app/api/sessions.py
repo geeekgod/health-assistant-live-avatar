@@ -44,12 +44,20 @@ async def verify_worker(authorization: Optional[str] = Header(None)) -> str:
         raise HTTPException(status_code=403, detail="Invalid worker token")
     return token
 
-def _build_agent_config(template_data: dict, template_id: str) -> dict:
+def _build_agent_config(
+    template_data: dict,
+    template_id: str,
+    *,
+    avatar_provider: str = "none",
+    tts_provider: str = "cartesia",
+) -> dict:
     return {
         "system_prompt": template_data.get("system_prompt"),
         "greeting": template_data.get("greeting"),
         "template_id": template_id,
         "tool_labels": template_data.get("tool_labels") or {},
+        "avatar_provider": avatar_provider,
+        "tts_provider": tts_provider,
     }
 
 async def _dispatch_agent(room_name: str, session_id: str, agent_config: dict) -> None:
@@ -122,7 +130,12 @@ async def create_session(req: CreateSessionRequest, db: AsyncSession = Depends(g
         template_data = yaml.safe_load(f)
 
     session_id = str(uuid.uuid4())
-    agent_config = _build_agent_config(template_data, req.template_id)
+    agent_config = _build_agent_config(
+        template_data,
+        req.template_id,
+        avatar_provider=req.avatar_provider,
+        tts_provider=req.tts_provider,
+    )
     runtime_config = {"avatar_provider": req.avatar_provider, "tts_provider": req.tts_provider}
 
     db_session = CallSession(id=session_id, template_id=req.template_id, runtime_config=runtime_config)
@@ -157,13 +170,13 @@ async def end_session(session_id: str, db: AsyncSession = Depends(get_db)):
     if not db_session:
         raise HTTPException(status_code=404, detail="Session not found")
 
+    needs_summary = db_session.summary_status not in ("ready", "generating")
     if db_session.status != "ended":
         db_session.status = "ended"
         db_session.ended_at = datetime.now(timezone.utc)
         await db.commit()
-    
-    # Sync summary generation as requested for speed
-    if db_session.summary_status not in ("ready", "generating"):
+
+    if needs_summary:
         await generate_summary_with_llm(session_id, db)
 
     return {"status": "ended"}

@@ -24,8 +24,11 @@ from livekit.plugins import cartesia, deepgram, groq
 from .avatar import start_avatar
 from .gemini_tts import GeminiTTS
 
+_ROOT = os.path.join(os.path.dirname(__file__), "..", "..")
 load_dotenv()
-load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", ".env"))
+load_dotenv(os.path.join(_ROOT, ".env"))
+load_dotenv(os.path.join(_ROOT, "backend", ".env"))
+load_dotenv(os.path.join(_ROOT, "agent", ".env"))
 
 if not os.getenv("LIVEKIT_URL", "").strip():
     public = os.getenv("LIVEKIT_PUBLIC_URL", "").strip()

@@ -103,10 +103,14 @@ async def _start_tavus(session: AgentSession, room: rtc.Room) -> None:
         return
 
     persona_id = os.getenv("TAVUS_PERSONA_ID", "").strip()
-    replica_id = os.getenv("TAVUS_REPLICA_ID", "").strip()
+    replica_id = (
+        os.getenv("TAVUS_REPLICA_ID", "").strip()
+        or os.getenv("TAVUS_FACE_ID", "").strip()
+    )
     if not persona_id or not replica_id:
         logger.warning(
-            "avatar_provider=tavus but TAVUS_PERSONA_ID or TAVUS_REPLICA_ID unset — audio-only"
+            "avatar_provider=tavus but TAVUS_PERSONA_ID and "
+            "TAVUS_REPLICA_ID (or TAVUS_FACE_ID) are required — audio-only"
         )
         return
 
