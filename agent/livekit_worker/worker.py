@@ -182,7 +182,18 @@ _INVALID_IDENTIFY_MARKERS = (
     "phone number",
 )
 
-_FAKE_PHONES = frozenset({"1234567890", "0000000000", "1111111111"})
+_FAKE_PHONES = frozenset({
+    "1234567890",
+    "0000000000",
+    "1111111111",
+    "9890123456",
+    "9876543210",
+    "9123456789",
+    "9999999999",
+    "8888888888",
+    "9000000000",
+    "9876512340",
+})
 _INDIAN_MOBILE_RE = re.compile(r"^[6-9]\d{9}$")
 
 
@@ -230,7 +241,36 @@ def _normalize_slot_date(date: str) -> str:
     return (date or "").strip()
 
 
-def _validate_identify_args(phone: str, name: str) -> str | None:
+def _digits_from_speech(text: str) -> str:
+    return re.sub(r"\D", "", text or "")
+
+
+def _phone_stated_in_transcript(phone_digits: str, user_lines: list[str]) -> bool:
+    if not phone_digits or not user_lines:
+        return False
+    spoken = _digits_from_speech(" ".join(user_lines))
+    return phone_digits in spoken
+
+
+def _name_stated_in_transcript(name: str, user_lines: list[str]) -> bool:
+    if not name or not user_lines:
+        return False
+    hay = " ".join(user_lines).lower()
+    parts = [p for p in re.split(r"\s+", name.strip()) if len(p) >= 2]
+    return bool(parts) and any(p.lower() in hay for p in parts)
+
+
+def _looks_like_invented_phone(digits: str) -> bool:
+    if digits in _FAKE_PHONES:
+        return True
+    if len(set(digits)) <= 2:
+        return True
+    return False
+
+
+def _validate_identify_args(
+    phone: str, name: str, user_lines: list[str] | None = None
+) -> str | None:
     """Return an error message when args are placeholders or incomplete."""
     phone = (phone or "").strip()
     name = (name or "").strip()
@@ -251,11 +291,25 @@ def _validate_identify_args(phone: str, name: str) -> str | None:
             "Ask for 10 digits only — no +91 or country code."
         )
 
-    if digits in _FAKE_PHONES:
-        return "That phone number looks like a placeholder. Ask for the caller's real phone number."
+    if _looks_like_invented_phone(digits):
+        return "That phone number looks invented or like an example. Ask for the caller's real phone number."
 
     if len(name) < 2 or not re.search(r"[a-zA-Z]", name):
         return "Ask for the caller's full name before calling identify_user."
+
+    lines = user_lines or []
+    if not _name_stated_in_transcript(name, lines):
+        return (
+            "The caller has not stated that name in this conversation yet. "
+            "Ask for their full name before calling identify_user."
+        )
+
+    if not _phone_stated_in_transcript(digits, lines):
+        return (
+            "The caller has not spoken this phone number yet. Ask them to say their "
+            "10-digit mobile number slowly (digits only, no +91), then call identify_user "
+            "with exactly what they said."
+        )
 
     return None
 
@@ -276,11 +330,28 @@ class HealthAssistantAgent(Agent):
         self._has_ended = False
         self._identified_phone: str | None = None
         self._identified_result: str | None = None
+        self._user_lines: list[str] = []
         super().__init__(
             instructions=system_prompt
             + "\nNever call identify_user twice for the same phone in one call."
             + "\nNever call identify_user until the caller has clearly spoken both their full name "
             "and a 10-digit Indian mobile number (6–9 as first digit, no +91). Do not pass placeholders."
+            + "\nAfter the caller gives their phone number, repeat all 10 digits back and ask them to confirm "
+            "before calling identify_user."
+            + "\nNever invent, guess, or use example phone numbers."
+        )
+
+    def note_user_speech(self, text: str) -> None:
+        cleaned = (text or "").strip()
+        if cleaned:
+            self._user_lines.append(cleaned)
+
+    def _require_identified(self) -> str | None:
+        if self._identified_phone:
+            return None
+        return (
+            "identify_user must succeed first. Collect the caller's full name and 10-digit "
+            "phone (spoken aloud), confirm the number, then call identify_user."
         )
 
     async def on_enter(self) -> None:
@@ -343,6 +414,9 @@ class HealthAssistantAgent(Agent):
     async def identify_user(self, context: RunContext, phone: str, name: str) -> str:
         """Look up or create a contact by phone number and name.
 
+        ONLY call after the caller has spoken their full name and 10-digit mobile aloud
+        in this conversation, you repeated the digits back, and they confirmed.
+
         Args:
             phone: 10-digit Indian mobile (without +91), starting with 6, 7, 8, or 9
             name: Caller full name (as stated by the caller)
@@ -351,7 +425,7 @@ class HealthAssistantAgent(Agent):
         if self._identified_phone == digits and self._identified_result is not None:
             return self._identified_result
 
-        if err := _validate_identify_args(phone, name):
+        if err := _validate_identify_args(phone, name, self._user_lines):
             result = {"error": err}
             message = self._tool_labels.get("identify_user", "identify user")
             logger.warning(
@@ -391,6 +465,8 @@ class HealthAssistantAgent(Agent):
         Args:
             date: "today", "tomorrow", or YYYY-MM-DD (use the date the caller asked for)
         """
+        if err := self._require_identified():
+            return json.dumps({"error": err})
         return await self._run_tool("fetch_slots", {"date": _normalize_slot_date(date)})
 
     @function_tool
@@ -404,6 +480,8 @@ class HealthAssistantAgent(Agent):
             date: Appointment date in YYYY-MM-DD format
             time: Appointment time in HH:MM 24-hour format
         """
+        if err := self._require_identified():
+            return json.dumps({"error": err})
         return await self._run_tool(
             "book_appointment",
             {"phone": _parse_indian_mobile(phone) or phone, "date": date, "time": time},
@@ -419,6 +497,8 @@ class HealthAssistantAgent(Agent):
         Returns appointments with time (HH:MM 24-hour, use for cancel/modify tools)
         and display_time (12-hour, use when speaking to the caller).
         """
+        if err := self._require_identified():
+            return json.dumps({"error": err})
         return await self._run_tool(
             "retrieve_appointments", {"phone": _parse_indian_mobile(phone) or phone}
         )
@@ -434,6 +514,8 @@ class HealthAssistantAgent(Agent):
             date: Appointment date in YYYY-MM-DD format
             time: Exact HH:MM time from retrieve_appointments (24-hour), not display_time
         """
+        if err := self._require_identified():
+            return json.dumps({"error": err})
         return await self._run_tool(
             "cancel_appointment",
             {"phone": _parse_indian_mobile(phone) or phone, "date": date, "time": time},
@@ -458,6 +540,8 @@ class HealthAssistantAgent(Agent):
             new_date: New appointment date in YYYY-MM-DD format
             new_time: New appointment time in HH:MM 24-hour format
         """
+        if err := self._require_identified():
+            return json.dumps({"error": err})
         return await self._run_tool(
             "modify_appointment",
             {
@@ -534,7 +618,8 @@ async def entrypoint(ctx: JobContext) -> None:
         "You MUST invoke the native registered tools (identify_user, fetch_slots, book_appointment, end_conversation) directly via the function calling protocol. "
         "Do not type the tool execution as text.\n"
         "2. Never guess or invent tool arguments (like name or phone). Ask the user if missing. "
-        "For phone, pass exactly 10 Indian mobile digits (6–9 first digit) without +91.\n"
+        "For phone, pass exactly 10 Indian mobile digits (6–9 first digit) without +91 — only digits the caller spoke aloud.\n"
+        "2b. Repeat the caller's 10-digit number back and wait for confirmation before identify_user.\n"
         "3. NEVER auto-select a booking time. You MUST list available slots and WAIT for the user to explicitly choose one before calling book_appointment.\n"
         "4. NEVER call fetch_slots for today unless the caller asked about today. "
         "When they ask about tomorrow, call fetch_slots with date \"tomorrow\" or tomorrow's YYYY-MM-DD from context.\n"
@@ -603,6 +688,8 @@ async def entrypoint(ctx: JobContext) -> None:
             content = getattr(item, "content", "")
             text = _extract_conversation_text(content)
             if role in ("user", "assistant") and text:
+                if role == "user":
+                    agent.note_user_speech(text)
                 if role == "assistant" and "<function=" in text:
                     logger.warning(
                         "Agent emitted literal function tag in session %s: %s",
