@@ -11,7 +11,8 @@ ENV UV_COMPILE_BYTECODE=1 \
 COPY agent/pyproject.toml agent/uv.lock ./
 COPY agent/livekit_worker ./livekit_worker
 RUN uv sync --frozen --no-dev
-RUN uv run python -m livekit_worker.worker download-files
+ARG SKIP_DOWNLOAD=false
+RUN if [ "$SKIP_DOWNLOAD" != "true" ]; then uv run python -m livekit_worker.worker download-files; fi
 
 FROM python:3.12-slim-bookworm AS runtime
 ENV PYTHONUNBUFFERED=1 \

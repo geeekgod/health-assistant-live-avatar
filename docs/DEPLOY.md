@@ -7,7 +7,7 @@ Deploys to `/var/www/mykare-assessment/health-assistant-live-avatar` on push to 
 | File | Trigger | What it does |
 |------|---------|--------------|
 | `.github/workflows/ci.yml` | PR + push to `main` | Validates compose files and builds Docker images |
-| `.github/workflows/deploy.yml` | Push to `main` (manual ok) | SSH → `git pull` → blue-green Docker deploy |
+| `.github/workflows/deploy.yml` | After **CI succeeds** on `main` (or manual) | SSH → `git pull` → blue-green Docker deploy |
 
 ## One-time server setup
 

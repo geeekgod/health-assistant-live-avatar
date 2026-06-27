@@ -54,6 +54,8 @@ jobs:
           push: false
           load: true
           tags: health-assistant-agent:ci
+          build-args: |
+            SKIP_DOWNLOAD=true
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

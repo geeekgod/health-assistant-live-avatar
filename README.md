@@ -73,7 +73,7 @@ Open **http://localhost:3000** (frontend) and **http://localhost:8000/docs** (AP
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
 | `ci.yml` | PR / push to `main` | Validate compose + build images |
-| `deploy.yml` | Push to `main` | SSH deploy with blue-green Docker |
+| `deploy.yml` | After CI passes on `main` (or manual) | SSH deploy with blue-green Docker |
 
 Production path: `/var/www/mykare-assessment/health-assistant-live-avatar`
 
