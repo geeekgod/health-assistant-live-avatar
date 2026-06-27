@@ -85,6 +85,19 @@ reload_nginx_if_configured() {
   fi
 }
 
+warn_ssl_env_mismatch() {
+  local lib="$ROOT/nginx/scripts/lib.sh"
+  [[ -f "$lib" ]] || return 0
+  # shellcheck source=/dev/null
+  source "$lib"
+  if nginx_ssl_configured && nginx_env_uses_http; then
+    log "WARN: SSL is enabled but docker/.env still has http:// API URLs"
+    log "      Run: sudo bash nginx/scripts/enable-ssl.sh && LIVEKIT=${LIVEKIT} bash docker/scripts/deploy.sh"
+  elif ! nginx_ssl_configured; then
+    log "Tip: enable HTTPS with: sudo bash nginx/scripts/enable-ssl.sh"
+  fi
+}
+
 update_nginx_upstream() {
   local color="$1"
   if [[ -f "$ROOT/nginx/scripts/update-upstream.sh" ]]; then
@@ -144,6 +157,7 @@ main() {
   bash "$ROOT/docker/scripts/autoheal.sh"
   update_nginx_upstream "$next"
   reload_nginx_if_configured
+  warn_ssl_env_mismatch
 }
 
 main "$@"

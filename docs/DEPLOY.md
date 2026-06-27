@@ -84,19 +84,14 @@ Active color is stored in `docker/.deploy-color`. Deploy updates nginx upstream 
 See **[nginx/README.md](../nginx/README.md)**.
 
 ```bash
-sudo bash nginx/scripts/install.sh blue
-curl -I http://mykare.backend.geeekgod.in/health
-sudo bash nginx/scripts/enable-ssl.sh
+LIVEKIT=cloud bash docker/scripts/deploy.sh
+sudo bash nginx/scripts/install.sh
+curl -I http://mykare.backend.geeekgod.in/health/ready
+sudo CERTBOT_EMAIL=you@example.com bash nginx/scripts/enable-ssl.sh
+LIVEKIT=cloud bash docker/scripts/deploy.sh   # rebuild frontend with HTTPS API URL
 ```
 
-Then set in `docker/.env`:
-
-```env
-NEXT_PUBLIC_API_URL=https://mykare.backend.geeekgod.in
-BACKEND_URL=https://mykare.backend.geeekgod.in
-```
-
-Redeploy to rebuild frontend with HTTPS API URL.
+`enable-ssl.sh` patches `docker/.env` with `https://mykare.backend.geeekgod.in` automatically.
 
 ## Manual deploy on server
 
