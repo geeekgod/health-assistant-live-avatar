@@ -68,13 +68,12 @@ Open **http://localhost:3000** (frontend) and **http://localhost:8000/docs** (AP
 - **Health:** backend `GET /health` (liveness) and `GET /health/ready` (DB check); frontend `GET /api/health`.
 - **Autoheal:** `docker/scripts/autoheal.sh` runs a singleton container that restarts unhealthy labelled services.
 
-## CI/CD (GitHub Actions)
+## Deploy (GitHub Actions)
 
-| Workflow | Trigger | Purpose |
-|----------|---------|---------|
-| `ci.yml` | PR / push to `main` | Validate compose + build images |
-| `deploy.yml` | After CI passes on `main` (or manual) | SSH deploy with blue-green Docker |
+One workflow: [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)
 
-Production path: `/var/www/mykare-assessment/health-assistant-live-avatar`
+On push to `main` (or manual run), it SSHs to your server, runs `git pull`, then `docker/scripts/deploy.sh` (build + blue-green).
 
-See **[docs/DEPLOY.md](docs/DEPLOY.md)** for SSH key setup, GitHub secrets, and server bootstrap.
+**Secrets:** `SSH_HOST`, `SSH_USER`, `SSH_PRIVATE_KEY` — optional: `SSH_PORT`, `DEPLOY_PATH`, `LIVEKIT_MODE`
+
+See **[docs/DEPLOY.md](docs/DEPLOY.md)** for SSH key setup and server bootstrap.

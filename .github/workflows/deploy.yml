@@ -1,9 +1,7 @@
 name: Deploy
 
 on:
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
+  push:
     branches: [main]
   workflow_dispatch:
 
@@ -13,13 +11,9 @@ concurrency:
 
 jobs:
   deploy:
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
-    environment: production
     steps:
-      - name: Deploy to server via SSH
+      - name: SSH deploy (git pull + docker build + blue-green)
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -35,7 +29,5 @@ jobs:
             LIVEKIT="${LIVEKIT:-cloud}"
 
             cd "$DEPLOY_PATH"
-            git fetch origin main
-            git reset --hard origin/main
-
+            git pull origin main
             LIVEKIT="$LIVEKIT" bash docker/scripts/deploy.sh
