@@ -187,7 +187,6 @@ async def execute_tool(
         db_session.status = "ended"
         if not db_session.ended_at:
             db_session.ended_at = dt.datetime.now(dt.timezone.utc)
-        await db.commit()
         result = {"status": "ended", "message": "Call ended. Generating summary..."}
 
     else:

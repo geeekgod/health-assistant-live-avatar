@@ -419,11 +419,21 @@ class HealthAssistantAgent(Agent):
 
     @function_tool
     async def end_conversation(self, context: RunContext) -> str:
-        """End the call and trigger post-call summary generation."""
+        """End the call after the caller explicitly confirms they have no more questions.
+
+        Only call when the user clearly says goodbye or confirms they are done
+        (e.g. "that's all", "nothing else", "bye"). Do not call after booking or
+        modifying an appointment in the same turn.
+        """
         if self._has_ended:
-            return "Call already ended."
-        self._has_ended = True
-        return await self._run_tool("end_conversation", {})
+            return json.dumps({"status": "ended", "message": "Call already ended."})
+        result_str = await self._run_tool("end_conversation", {})
+        try:
+            if not json.loads(result_str).get("error"):
+                self._has_ended = True
+        except json.JSONDecodeError:
+            pass
+        return result_str
 
 
 @server.rtc_session(agent_name="health-assistant")
@@ -447,7 +457,9 @@ async def entrypoint(ctx: JobContext) -> None:
         "You MUST invoke the native registered tools (identify_user, fetch_slots, book_appointment, end_conversation) directly via the function calling protocol. "
         "Do not type the tool execution as text.\n"
         "2. Never guess or invent tool arguments (like name or phone). Ask the user if missing.\n"
-        "3. NEVER auto-select a booking time. You MUST list available slots and WAIT for the user to explicitly choose one before calling book_appointment."
+        "3. NEVER auto-select a booking time. You MUST list available slots and WAIT for the user to explicitly choose one before calling book_appointment.\n"
+        "4. NEVER call end_conversation in the same turn as book_appointment, modify_appointment, or cancel_appointment. "
+        "First ask if the caller needs anything else; only call end_conversation after they clearly confirm they are done."
     )
     greeting = agent_config.get("greeting")
     tool_labels = agent_config.get("tool_labels") or {}
