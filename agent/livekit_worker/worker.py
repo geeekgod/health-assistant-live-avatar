@@ -679,14 +679,31 @@ async def _save_recording(session_id: str, path: str) -> None:
     logger.info("Saved session recording to %s (%d bytes)", dest, os.path.getsize(dest))
 
 
+def _session_recording_enabled() -> bool:
+    return os.getenv("SESSION_RECORDING", "true").lower() in ("1", "true", "yes")
+
+
+def _session_record_options() -> bool | dict[str, bool]:
+    if not _session_recording_enabled():
+        return False
+    return {"audio": True, "traces": False, "logs": False, "transcript": False}
+
+
 async def on_session_end(ctx: JobContext) -> None:
     metadata = _parse_job_metadata(ctx)
     session_id = _resolve_session_id(ctx, metadata)
+    if not _session_recording_enabled():
+        return
     try:
         report = ctx.make_session_report()
         audio_path = report.audio_recording_path
         if audio_path and audio_path.exists():
             await _save_recording(session_id, str(audio_path))
+        else:
+            logger.warning(
+                "No session audio to save for %s (recording was enabled but audio file missing)",
+                session_id,
+            )
     except Exception as exc:
         logger.warning("Failed to save session recording for %s: %s", session_id, exc)
 
@@ -814,18 +831,11 @@ async def entrypoint(ctx: JobContext) -> None:
     await ctx.connect()
     await start_avatar(session, ctx.room, provider=avatar_provider)
 
-    cloud_obs = os.getenv("LIVEKIT_CLOUD_OBSERVABILITY", "").lower() in ("1", "true", "yes")
-    record_opts = (
-        {"audio": True, "traces": False, "logs": False, "transcript": False}
-        if cloud_obs
-        else False
-    )
-
     await session.start(
         agent=agent,
         room=ctx.room,
         room_input_options=RoomInputOptions(text_enabled=True),
-        record=record_opts,
+        record=_session_record_options(),
     )
 
 

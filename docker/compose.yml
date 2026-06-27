@@ -85,8 +85,7 @@ services:
       BACKEND_URL: http://backend:8000
       LIVEKIT_URL: ${LIVEKIT_INTERNAL_URL:-ws://livekit:7880}
       RECORDINGS_DIR: /data/recordings
-      # Set true only if Agent Observability is enabled in LiveKit Cloud (avoids 401 log spam)
-      LIVEKIT_CLOUD_OBSERVABILITY: ${LIVEKIT_CLOUD_OBSERVABILITY:-false}
+      SESSION_RECORDING: ${SESSION_RECORDING:-true}
     volumes:
       - recordings:/data/recordings
     depends_on:
