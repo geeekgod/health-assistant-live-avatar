@@ -20,15 +20,15 @@ make dev
 
 All Docker assets live under [`docker/`](docker/):
 
-| Path | Purpose |
-|------|---------|
-| `docker/compose.yml` | Service orchestration |
-| `docker/livekit.yaml` | Self-hosted LiveKit config |
-| `docker/.env.example` | Environment template |
+| Path                         | Purpose                                            |
+| ---------------------------- | -------------------------------------------------- |
+| `docker/compose.yml`         | Service orchestration                              |
+| `docker/livekit.yaml`        | Self-hosted LiveKit config                         |
+| `docker/.env.example`        | Environment template                               |
 | `docker/frontend/Dockerfile` | Next.js standalone (distroless, &lt;100 MB target) |
-| `docker/backend/Dockerfile` | FastAPI + uv multi-stage |
-| `docker/agent/Dockerfile` | LiveKit agent worker |
-| `docker/scripts/compose.sh` | Compose helper used by Makefile |
+| `docker/backend/Dockerfile`  | FastAPI + uv multi-stage                           |
+| `docker/agent/Dockerfile`    | LiveKit agent worker                               |
+| `docker/scripts/compose.sh`  | Compose helper used by Makefile                    |
 
 ```bash
 cp docker/.env.example docker/.env   # first time only (auto-copied on docker-up)
@@ -54,11 +54,11 @@ Open **http://localhost:3000** (frontend) and **http://localhost:8000/docs** (AP
 
 **Profiles**
 
-| `LIVEKIT` | Services started |
-|-----------|------------------|
-| `local` | livekit, backend, agent, frontend |
-| `cloud` | backend, agent, frontend (external LiveKit URL in `.env`) |
-| `off` | backend, frontend only |
+| `LIVEKIT` | Services started                                          |
+| --------- | --------------------------------------------------------- |
+| `local`   | livekit, backend, agent, frontend                         |
+| `cloud`   | backend, agent, frontend (external LiveKit URL in `.env`) |
+| `off`     | backend, frontend only                                    |
 
 **Notes**
 
@@ -79,3 +79,12 @@ On push to `main` (or manual run), it SSHs to your server, runs `git pull`, then
 `SSH_HOST`, `SSH_USER`, `SSH_PRIVATE_KEY` — optional: `SSH_PORT`, `DEPLOY_PATH`, `LIVEKIT_MODE`
 
 See **[docs/DEPLOY.md](docs/DEPLOY.md)** for SSH key setup and server bootstrap.
+
+## Nginx (production)
+
+Configs and scripts under [`nginx/`](nginx/). On the server:
+
+```bash
+sudo bash nginx/scripts/install.sh blue
+sudo bash nginx/scripts/enable-ssl.sh
+```

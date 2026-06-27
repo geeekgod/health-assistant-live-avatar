@@ -77,7 +77,26 @@ Optional: create a **production** environment under **Settings → Environments*
 | blue  | 3000     | 8000    |
 | green | 3002     | 8002    |
 
-Active color is stored in `docker/.deploy-color`. When nginx is added, point upstream to the active ports (or add a switch step in `docker/scripts/deploy.sh`).
+Active color is stored in `docker/.deploy-color`. Deploy updates nginx upstream automatically via `nginx/scripts/update-upstream.sh`.
+
+## Nginx + SSL
+
+See **[nginx/README.md](../nginx/README.md)**.
+
+```bash
+sudo bash nginx/scripts/install.sh blue
+curl -I http://mykare.backend.geeekgod.in/health
+sudo bash nginx/scripts/enable-ssl.sh
+```
+
+Then set in `docker/.env`:
+
+```env
+NEXT_PUBLIC_API_URL=https://mykare.backend.geeekgod.in
+BACKEND_URL=https://mykare.backend.geeekgod.in
+```
+
+Redeploy to rebuild frontend with HTTPS API URL.
 
 ## Manual deploy on server
 

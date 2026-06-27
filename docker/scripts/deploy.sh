@@ -81,7 +81,14 @@ reload_nginx_if_configured() {
       log "WARN: nginx config test failed — skipping reload"
     fi
   else
-    log "nginx not configured — skip reload (wire upstream when ready)"
+    log "nginx not configured — skip reload (run: sudo bash nginx/scripts/install.sh)"
+  fi
+}
+
+update_nginx_upstream() {
+  local color="$1"
+  if [[ -f "$ROOT/nginx/scripts/update-upstream.sh" ]]; then
+    bash "$ROOT/nginx/scripts/update-upstream.sh" "$color"
   fi
 }
 
@@ -135,6 +142,7 @@ main() {
   log "Deploy complete. Active color: ${next}"
 
   bash "$ROOT/docker/scripts/autoheal.sh"
+  update_nginx_upstream "$next"
   reload_nginx_if_configured
 }
 
