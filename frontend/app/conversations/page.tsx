@@ -52,10 +52,7 @@ export default function ConversationsPage() {
       <div className="mx-auto max-w-3xl">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <Link
-              href="/"
-              className="text-sm font-bold underline decoration-2 underline-offset-4 hover:text-primary"
-            >
+            <Link href="/" className="neo-link text-sm">
               ← New call
             </Link>
             <h1 className="mt-4 text-4xl font-bold tracking-tight">Conversations</h1>
@@ -65,7 +62,7 @@ export default function ConversationsPage() {
           </div>
         </div>
 
-        <div className="mt-8 space-y-3">
+        <div className="mt-8 space-y-6">
           {error && (
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>
@@ -81,10 +78,7 @@ export default function ConversationsPage() {
               <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
                 <MessageSquare className="h-10 w-10 text-muted-foreground/50" />
                 <p className="text-sm text-muted-foreground">No conversations yet.</p>
-                <Link
-                  href="/"
-                  className="font-bold underline decoration-2 underline-offset-4 hover:text-primary"
-                >
+                <Link href="/" className="neo-link text-sm">
                   Start your first call
                 </Link>
               </CardContent>
@@ -92,9 +86,13 @@ export default function ConversationsPage() {
           )}
 
           {items.map((item) => (
-            <Link key={item.session_id} href={`/conversations/${item.session_id}`}>
-              <Card className="neo-pressable transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5">
-                <CardContent className="flex items-center gap-4 py-4">
+            <Link
+              key={item.session_id}
+              href={`/conversations/${item.session_id}`}
+              className="neo-card-link"
+            >
+              <Card className="neo-card-target">
+                <CardContent className="flex items-center gap-4 px-6 py-5">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="truncate font-mono text-sm">{item.session_id.slice(0, 8)}…</p>

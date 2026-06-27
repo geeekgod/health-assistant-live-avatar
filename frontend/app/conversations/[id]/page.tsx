@@ -137,21 +137,23 @@ function RecordingSection({ data }: { data: SummaryResponse }) {
   )
 }
 
+const SCROLL_PANEL_HEIGHT = 'h-96'
+
 function TranscriptSection({ transcript }: { transcript: TranscriptEntry[] }) {
   return (
-    <Card>
+    <Card className="flex flex-col">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-base">
           <MessageSquare className="h-4 w-4" />
           Transcript
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="min-h-0">
         {transcript.length === 0 ? (
           <p className="text-sm text-muted-foreground">No transcript captured.</p>
         ) : (
-          <ScrollArea className="max-h-[28rem]">
-            <div className="space-y-3 pr-4">
+          <ScrollArea className={`${SCROLL_PANEL_HEIGHT} w-full rounded-base border-2 border-foreground bg-muted/30`}>
+            <div className="space-y-3 p-4">
               {transcript.map((entry, i) => (
                 <div
                   key={`${entry.role}-${i}`}
@@ -182,18 +184,19 @@ function TranscriptSection({ transcript }: { transcript: TranscriptEntry[] }) {
 
 function ToolTimeline({ events }: { events: ToolEventRecord[] }) {
   return (
-    <Card>
+    <Card className="flex flex-col">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-base">
           <Wrench className="h-4 w-4" />
           Tool execution flow
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="min-h-0">
         {events.length === 0 ? (
           <p className="text-sm text-muted-foreground">No tools were invoked.</p>
         ) : (
-          <div className="relative space-y-0">
+          <ScrollArea className={`${SCROLL_PANEL_HEIGHT} w-full rounded-base border-2 border-foreground bg-muted/30`}>
+            <div className="relative space-y-0 p-4">
             {events.map((event, i) => (
               <div
                 key={`${event.tool_name}-${event.timestamp}-${i}`}
@@ -242,7 +245,8 @@ function ToolTimeline({ events }: { events: ToolEventRecord[] }) {
                 </div>
               </div>
             ))}
-          </div>
+            </div>
+          </ScrollArea>
         )}
       </CardContent>
     </Card>
@@ -329,10 +333,7 @@ export default function ConversationDetailPage({ params }: { params: Promise<{ i
   return (
     <main className="min-h-screen p-6 md:p-10">
       <div className="mx-auto max-w-4xl">
-        <Link
-          href="/conversations"
-          className="text-sm font-bold underline decoration-2 underline-offset-4 hover:text-primary"
-        >
+        <Link href="/conversations" className="neo-link text-sm">
           ← All conversations
         </Link>
         <h1 className="mt-4 text-4xl font-bold tracking-tight">Conversation</h1>

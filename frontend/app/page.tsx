@@ -70,7 +70,7 @@ export default function LobbyPage() {
             >
               <Label
                 htmlFor="avatar-bey"
-                className={`flex cursor-pointer items-center gap-2 rounded-base border-2 p-3 font-bold shadow-brutal-sm transition-all ${
+                className={`neo-pressable flex cursor-pointer items-center gap-2 rounded-base border-2 p-3 font-bold shadow-brutal-sm ${
                   avatar === 'bey'
                     ? 'border-foreground bg-accent'
                     : 'border-foreground bg-card'
@@ -81,7 +81,7 @@ export default function LobbyPage() {
               </Label>
               <Label
                 htmlFor="avatar-tavus"
-                className={`flex cursor-pointer items-center gap-2 rounded-base border-2 p-3 font-bold shadow-brutal-sm transition-all ${
+                className={`neo-pressable flex cursor-pointer items-center gap-2 rounded-base border-2 p-3 font-bold shadow-brutal-sm ${
                   avatar === 'tavus'
                     ? 'border-foreground bg-accent'
                     : 'border-foreground bg-card'
@@ -102,7 +102,7 @@ export default function LobbyPage() {
             >
               <Label
                 htmlFor="tts-cartesia"
-                className={`flex cursor-pointer items-center gap-2 rounded-base border-2 p-3 font-bold shadow-brutal-sm transition-all ${
+                className={`neo-pressable flex cursor-pointer items-center gap-2 rounded-base border-2 p-3 font-bold shadow-brutal-sm ${
                   tts === 'cartesia'
                     ? 'border-foreground bg-primary text-primary-foreground'
                     : 'border-foreground bg-card'
@@ -113,7 +113,7 @@ export default function LobbyPage() {
               </Label>
               <Label
                 htmlFor="tts-gemini"
-                className={`flex cursor-pointer items-center gap-2 rounded-base border-2 p-3 font-bold shadow-brutal-sm transition-all ${
+                className={`neo-pressable flex cursor-pointer items-center gap-2 rounded-base border-2 p-3 font-bold shadow-brutal-sm ${
                   tts === 'gemini'
                     ? 'border-foreground bg-primary text-primary-foreground'
                     : 'border-foreground bg-card'
@@ -130,10 +130,7 @@ export default function LobbyPage() {
           </Button>
 
           <p className="text-center text-sm font-medium text-muted-foreground">
-            <Link
-              href="/conversations"
-              className="font-bold text-foreground underline decoration-2 underline-offset-4 hover:text-primary"
-            >
+            <Link href="/conversations" className="neo-link text-sm text-foreground">
               View past conversations
             </Link>
           </p>

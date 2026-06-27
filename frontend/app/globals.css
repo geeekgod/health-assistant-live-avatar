@@ -46,13 +46,58 @@
     box-shadow: 2px 2px 0 0 hsl(var(--shadow));
   }
 
+  /* Buttons, chips, bordered controls */
   .neo-pressable {
-    @apply transition-all duration-100;
+    @apply transition-all duration-150 ease-out;
+  }
+
+  .neo-pressable:hover:not(:disabled) {
+    transform: translate(-2px, -2px);
+  }
+
+  .neo-pressable.shadow-brutal:hover:not(:disabled) {
+    box-shadow: 6px 6px 0 0 hsl(var(--shadow));
+  }
+
+  .neo-pressable.shadow-brutal-sm:hover:not(:disabled) {
+    box-shadow: 4px 4px 0 0 hsl(var(--shadow));
   }
 
   .neo-pressable:active:not(:disabled) {
+    transform: translate(4px, 4px) !important;
+    box-shadow: none !important;
+  }
+
+  /* Card wrapped in <Link> */
+  .neo-card-link {
+    @apply block rounded-base outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+  }
+
+  .neo-card-link > .neo-card-target {
+    @apply transition-all duration-150 ease-out;
+  }
+
+  .neo-card-link:hover > .neo-card-target {
+    transform: translate(-3px, -3px);
+    box-shadow: 6px 6px 0 0 hsl(var(--shadow));
+  }
+
+  .neo-card-link:active > .neo-card-target {
     transform: translate(4px, 4px);
     box-shadow: none;
+  }
+
+  /* Text links */
+  .neo-link {
+    @apply inline-block font-bold underline decoration-2 underline-offset-4 transition-all duration-150;
+  }
+
+  .neo-link:hover {
+    @apply -translate-y-0.5 text-primary;
+  }
+
+  .neo-link:active {
+    @apply translate-y-0.5 text-primary/80;
   }
 }
 
