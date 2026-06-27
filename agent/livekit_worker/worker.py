@@ -245,11 +245,92 @@ def _digits_from_speech(text: str) -> str:
     return re.sub(r"\D", "", text or "")
 
 
-def _phone_stated_in_transcript(phone_digits: str, user_lines: list[str]) -> bool:
-    if not phone_digits or not user_lines:
+_WORD_TO_DIGIT: dict[str, str] = {
+    "zero": "0",
+    "oh": "0",
+    "one": "1",
+    "won": "1",
+    "two": "2",
+    "to": "2",
+    "too": "2",
+    "three": "3",
+    "four": "4",
+    "for": "4",
+    "five": "5",
+    "six": "6",
+    "seven": "7",
+    "eight": "8",
+    "ate": "8",
+    "nine": "9",
+}
+
+_AFFIRMATIONS = frozenset({
+    "yes",
+    "yeah",
+    "yep",
+    "yup",
+    "correct",
+    "right",
+    "ok",
+    "okay",
+    "sure",
+    "absolutely",
+    "that's right",
+    "thats right",
+    "that is right",
+    "correct",
+})
+
+
+def _words_to_digits(text: str) -> str:
+    tokens = re.findall(r"[a-z0-9]+", (text or "").lower())
+    out: list[str] = []
+    for token in tokens:
+        if token.isdigit():
+            out.append(token)
+        elif token in _WORD_TO_DIGIT:
+            out.append(_WORD_TO_DIGIT[token])
+    return "".join(out)
+
+
+def _all_spoken_digits(text: str) -> str:
+    direct = _digits_from_speech(text)
+    spoken = _words_to_digits(text)
+    return direct if len(direct) >= len(spoken) else spoken
+
+
+def _indian_phones_in_text(text: str) -> list[str]:
+    blob = _all_spoken_digits(text)
+    found: list[str] = []
+    for i in range(max(0, len(blob) - 9)):
+        chunk = blob[i : i + 10]
+        if _INDIAN_MOBILE_RE.match(chunk):
+            found.append(chunk)
+    return found
+
+
+def _is_affirmation(text: str) -> bool:
+    normalized = re.sub(r"[^\w\s']", "", (text or "").lower()).strip()
+    if not normalized:
         return False
-    spoken = _digits_from_speech(" ".join(user_lines))
-    return phone_digits in spoken
+    if normalized in _AFFIRMATIONS:
+        return True
+    return any(normalized.startswith(f"{word} ") for word in ("yes", "yeah", "yep", "ok", "okay"))
+
+
+def _phone_stated_in_transcript(
+    phone_digits: str,
+    user_lines: list[str],
+    confirmed_phones: set[str] | None = None,
+) -> bool:
+    if not phone_digits:
+        return False
+    if confirmed_phones and phone_digits in confirmed_phones:
+        return True
+    if not user_lines:
+        return False
+    blob = _all_spoken_digits(" ".join(user_lines))
+    return phone_digits in blob
 
 
 def _name_stated_in_transcript(name: str, user_lines: list[str]) -> bool:
@@ -269,7 +350,10 @@ def _looks_like_invented_phone(digits: str) -> bool:
 
 
 def _validate_identify_args(
-    phone: str, name: str, user_lines: list[str] | None = None
+    phone: str,
+    name: str,
+    user_lines: list[str] | None = None,
+    confirmed_phones: set[str] | None = None,
 ) -> str | None:
     """Return an error message when args are placeholders or incomplete."""
     phone = (phone or "").strip()
@@ -304,11 +388,11 @@ def _validate_identify_args(
             "Ask for their full name before calling identify_user."
         )
 
-    if not _phone_stated_in_transcript(digits, lines):
+    if not _phone_stated_in_transcript(digits, lines, confirmed_phones):
         return (
             "The caller has not spoken this phone number yet. Ask them to say their "
-            "10-digit mobile number slowly (digits only, no +91), then call identify_user "
-            "with exactly what they said."
+            "10-digit mobile number slowly (digits only, no +91), repeat it back, get "
+            "confirmation, then call identify_user with exactly what they said."
         )
 
     return None
@@ -331,6 +415,8 @@ class HealthAssistantAgent(Agent):
         self._identified_phone: str | None = None
         self._identified_result: str | None = None
         self._user_lines: list[str] = []
+        self._confirmed_phones: set[str] = set()
+        self._last_assistant_readback_phones: set[str] = set()
         super().__init__(
             instructions=system_prompt
             + "\nNever call identify_user twice for the same phone in one call."
@@ -343,8 +429,19 @@ class HealthAssistantAgent(Agent):
 
     def note_user_speech(self, text: str) -> None:
         cleaned = (text or "").strip()
-        if cleaned:
-            self._user_lines.append(cleaned)
+        if not cleaned:
+            return
+        if _is_affirmation(cleaned) and self._last_assistant_readback_phones:
+            self._confirmed_phones.update(self._last_assistant_readback_phones)
+        self._user_lines.append(cleaned)
+
+    def note_assistant_speech(self, text: str) -> None:
+        cleaned = (text or "").strip()
+        if not cleaned:
+            return
+        phones = _indian_phones_in_text(cleaned)
+        if phones:
+            self._last_assistant_readback_phones = set(phones)
 
     def _require_identified(self) -> str | None:
         if self._identified_phone:
@@ -425,7 +522,7 @@ class HealthAssistantAgent(Agent):
         if self._identified_phone == digits and self._identified_result is not None:
             return self._identified_result
 
-        if err := _validate_identify_args(phone, name, self._user_lines):
+        if err := _validate_identify_args(phone, name, self._user_lines, self._confirmed_phones):
             result = {"error": err}
             message = self._tool_labels.get("identify_user", "identify user")
             logger.warning(
@@ -661,7 +758,7 @@ async def entrypoint(ctx: JobContext) -> None:
             endpointing={
                 "mode": "fixed",
                 "min_delay": 0.5,
-                "max_delay": 3.0,
+                "max_delay": 4.0,
             },
             interruption={
                 "mode": "vad",
@@ -680,29 +777,6 @@ async def entrypoint(ctx: JobContext) -> None:
         tts=tts_plugin,
     )
 
-    @session.on("conversation_item_added")
-    def on_item_added(event):
-        try:
-            item = event.item
-            role = getattr(item, "role", None)
-            content = getattr(item, "content", "")
-            text = _extract_conversation_text(content)
-            if role in ("user", "assistant") and text:
-                if role == "user":
-                    agent.note_user_speech(text)
-                if role == "assistant" and "<function=" in text:
-                    logger.warning(
-                        "Agent emitted literal function tag in session %s: %s",
-                        session_id,
-                        text,
-                    )
-                else:
-                    asyncio.create_task(
-                        _persist_conversation_turn(ctx.room, session_id, role, text)
-                    )
-        except Exception:
-            pass
-
     agent = HealthAssistantAgent(
         session_id=session_id,
         room=ctx.room,
@@ -711,13 +785,47 @@ async def entrypoint(ctx: JobContext) -> None:
         tool_labels=tool_labels,
     )
 
+    @session.on("conversation_item_added")
+    def on_item_added(event):
+        try:
+            item = event.item
+            role = getattr(item, "role", None)
+            content = getattr(item, "content", "")
+            text = _extract_conversation_text(content)
+            if role not in ("user", "assistant") or not text:
+                return
+            if role == "user":
+                agent.note_user_speech(text)
+            else:
+                agent.note_assistant_speech(text)
+            if role == "assistant" and "<function=" in text:
+                logger.warning(
+                    "Agent emitted literal function tag in session %s: %s",
+                    session_id,
+                    text,
+                )
+                return
+            asyncio.create_task(
+                _persist_conversation_turn(ctx.room, session_id, role, text)
+            )
+        except Exception:
+            pass
+
     await ctx.connect()
     await start_avatar(session, ctx.room, provider=avatar_provider)
+
+    cloud_obs = os.getenv("LIVEKIT_CLOUD_OBSERVABILITY", "").lower() in ("1", "true", "yes")
+    record_opts = (
+        {"audio": True, "traces": False, "logs": False, "transcript": False}
+        if cloud_obs
+        else False
+    )
+
     await session.start(
         agent=agent,
         room=ctx.room,
         room_input_options=RoomInputOptions(text_enabled=True),
-        record={"audio": True, "traces": False, "logs": False, "transcript": False},
+        record=record_opts,
     )
 
 
