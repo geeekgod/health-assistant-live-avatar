@@ -229,11 +229,11 @@ else
   fail "${ISSUES} issue(s) found — see FAIL lines above"
   log ""
   log "Common recovery (run on server):"
-  log "  sudo systemctl start nginx"
+  log "  sudo bash nginx/scripts/repair.sh"
+  log "  # or step by step:"
   log "  sudo bash nginx/scripts/install.sh"
   log "  sudo bash nginx/scripts/enable-ssl.sh"
-  log "  LIVEKIT=${LIVEKIT_MODE} bash docker/scripts/deploy.sh"
-  log "  bash nginx/scripts/update-upstream.sh"
+  log "  sudo systemctl restart nginx"
 fi
 
 exit "$([[ "$ISSUES" -eq 0 ]] && echo 0 || echo 1)"

@@ -86,3 +86,20 @@ nginx_env_uses_http() {
   env_file="$root/docker/.env"
   [[ -f "$env_file" ]] && grep -qE '^NEXT_PUBLIC_API_URL=http://' "$env_file"
 }
+
+nginx_port_listening() {
+  local port="$1"
+  ss -tln 2>/dev/null | grep -qE ":${port}[[:space:]]"
+}
+
+nginx_reload_or_restart() {
+  nginx -t
+  if nginx_port_listening 80 || nginx_port_listening 443; then
+    systemctl reload nginx
+  else
+    systemctl restart nginx
+  fi
+  if ! nginx_port_listening 80 && ! nginx_port_listening 443; then
+    return 1
+  fi
+}

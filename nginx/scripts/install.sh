@@ -29,8 +29,23 @@ fi
 
 install_site() {
   local site="$1"
-  cp "$NGINX_ROOT/sites-available/$site" "/etc/nginx/sites-available/$site"
-  ln -sf "/etc/nginx/sites-available/$site" "/etc/nginx/sites-enabled/$site"
+  local src="$NGINX_ROOT/sites-available/$site"
+  local dst="/etc/nginx/sites-available/$site"
+
+  if [[ ! -s "$src" ]]; then
+    log "ERROR: repo config empty or missing: $src"
+    log "Run: cd $REPO_ROOT && git pull"
+    exit 1
+  fi
+
+  cp "$src" "$dst"
+  ln -sf "$dst" "/etc/nginx/sites-enabled/$site"
+
+  if [[ ! -s "$dst" ]]; then
+    log "ERROR: $dst is still empty after copy"
+    exit 1
+  fi
+  log "Installed $site ($(wc -c <"$dst") bytes)"
 }
 
 log "Installing snippets and upstream ($COLOR)…"
@@ -57,7 +72,13 @@ cat > /etc/nginx/conf.d/mykare-upstream.conf <<'EOF'
 include /etc/nginx/mykare/upstream-active.conf;
 EOF
 
-nginx -t
-systemctl reload nginx
-log "Done. Test: curl -I http://${DOMAIN_BACKEND}/health/ready"
+if ! nginx_reload_or_restart; then
+  log "ERROR: nginx not listening on :80 or :443 after restart"
+  journalctl -u nginx -n 20 --no-pager
+  exit 1
+fi
+
+log "Done. nginx listening:"
+ss -tlnp | grep -E ':80|:443' || true
+log "Test: curl -I http://${DOMAIN_BACKEND}/health/ready"
 log "Then SSL: sudo bash nginx/scripts/enable-ssl.sh"

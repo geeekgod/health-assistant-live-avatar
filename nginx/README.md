@@ -46,6 +46,7 @@ LIVEKIT=cloud bash docker/scripts/deploy.sh
 | Script | Purpose |
 |--------|---------|
 | `scripts/lib.sh` | Shared helpers (LiveKit mode, HTTPS env patch) |
+| `scripts/repair.sh` | One-shot fix: restore configs + SSL + restart nginx |
 | `scripts/diagnose.sh` | Full diagnosis (nginx, SSL, docker, URLs, DNS) |
 | `scripts/doctor.sh` | Alias for `diagnose.sh` |
 | `scripts/setup-firewall.sh` | Open UFW 22/80/443 (+ LiveKit if local) |
