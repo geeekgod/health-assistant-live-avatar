@@ -3,7 +3,8 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Info } from 'lucide-react'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
@@ -91,6 +92,27 @@ export default function LobbyPage() {
                 Tavus
               </Label>
             </RadioGroup>
+            {avatar === 'tavus' && (
+              <Alert className="bg-accent/25">
+                <Info className="h-4 w-4" />
+                <AlertTitle>Tavus demo note</AlertTitle>
+                <AlertDescription className="space-y-3">
+                  <p>
+                    This project&apos;s Tavus account has limited credits remaining, so a call
+                    may pause or disconnect partway through. For a smoother, uninterrupted demo,
+                    BEY is the recommended option.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setAvatar('bey')}
+                  >
+                    Switch to BEY
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            )}
           </div>
 
           <div className="space-y-3">
