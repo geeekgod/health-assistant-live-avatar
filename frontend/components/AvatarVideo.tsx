@@ -13,9 +13,8 @@ import { Badge } from '@/components/ui/badge'
 import { isAvatarParticipant } from '@/lib/livekitParticipants'
 
 interface AvatarVideoProps {
-  fallback: ReactNode
+  fallback?: ReactNode
   templateName?: string
-  templateIcon?: string
 }
 
 function WaveformFallback({ isSpeaking }: { isSpeaking: boolean }) {
@@ -37,7 +36,7 @@ function WaveformFallback({ isSpeaking }: { isSpeaking: boolean }) {
   )
 }
 
-export default function AvatarVideo({ fallback, templateName, templateIcon }: AvatarVideoProps) {
+export default function AvatarVideo({ fallback, templateName }: AvatarVideoProps) {
   const room = useRoomContext()
   const videoRef = useRef<HTMLVideoElement>(null)
   const [hasVideo, setHasVideo] = useState(false)
@@ -110,22 +109,22 @@ export default function AvatarVideo({ fallback, templateName, templateIcon }: Av
   }, [room])
 
   return (
-    <div className="relative flex h-full w-full items-center justify-center p-6 md:p-10">
+    <div className="relative h-full min-h-0 w-full">
       <video
         ref={videoRef}
         autoPlay
         playsInline
         muted
-        className={`relative z-10 max-h-full max-w-full rounded-base border-2 border-foreground bg-card object-contain shadow-brutal transition-opacity duration-500 ${
-          hasVideo ? 'opacity-100' : 'pointer-events-none absolute opacity-0'
+        className={`absolute inset-0 z-10 m-auto max-h-[calc(100%-3rem)] max-w-[calc(100%-3rem)] rounded-base border-2 border-foreground bg-secondary object-contain shadow-brutal transition-opacity duration-500 ${
+          hasVideo ? 'opacity-100' : 'pointer-events-none opacity-0'
         }`}
       />
 
       {!hasVideo ? (
-        <div className="flex flex-col items-center justify-center gap-6">
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-6 p-6 md:p-10">
           <div
-            className={`rounded-base border-2 border-foreground bg-card p-10 shadow-brutal transition-all duration-300 ${
-              isSpeaking ? 'translate-x-[-2px] translate-y-[-2px] bg-accent/30' : ''
+            className={`rounded-base border-2 border-foreground bg-secondary p-10 shadow-brutal transition-colors duration-300 ${
+              isSpeaking ? 'bg-accent/30' : ''
             }`}
           >
             {fallback ?? <WaveformFallback isSpeaking={isSpeaking} />}
@@ -141,8 +140,7 @@ export default function AvatarVideo({ fallback, templateName, templateIcon }: Av
       )}
 
       {templateName && (
-        <Badge variant="secondary" className="absolute bottom-4 left-4 z-20 gap-1.5">
-          {templateIcon && <span>{templateIcon}</span>}
+        <Badge variant="secondary" className="absolute bottom-4 left-4 z-20">
           {templateName}
         </Badge>
       )}

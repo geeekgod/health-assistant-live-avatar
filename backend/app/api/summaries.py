@@ -39,7 +39,7 @@ def _load_template_data(template_id: str) -> dict:
     return {}
 
 def _find_recording_path(session_id: str) -> str | None:
-    for ext in (".wav", ".mp3"):
+    for ext in (".ogg", ".wav", ".mp3", ".webm"):
         path = os.path.join(RECORDINGS_DIR, f"{session_id}{ext}")
         if os.path.isfile(path):
             return path
@@ -200,5 +200,12 @@ async def get_session_recording(session_id: str, db: AsyncSession = Depends(get_
     if not recording_path:
         raise HTTPException(status_code=404, detail="No recording available for this session")
 
-    media_type = "audio/wav" if recording_path.endswith(".wav") else "audio/mpeg"
+    if recording_path.endswith(".wav"):
+        media_type = "audio/wav"
+    elif recording_path.endswith(".mp3"):
+        media_type = "audio/mpeg"
+    elif recording_path.endswith(".ogg"):
+        media_type = "audio/ogg"
+    else:
+        media_type = "audio/webm"
     return FileResponse(recording_path, media_type=media_type, filename=os.path.basename(recording_path))

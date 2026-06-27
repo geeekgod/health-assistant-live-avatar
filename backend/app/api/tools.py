@@ -47,6 +47,23 @@ def _slots_for_date(template_data: dict, date_str: str) -> list[str]:
         return DEFAULT_SLOTS
     return list(slots)
 
+def _normalize_time(time_str: str | None) -> str | None:
+    if not time_str:
+        return None
+    t = time_str.strip()
+    for fmt in ("%H:%M", "%I:%M %p", "%I:%M%p"):
+        try:
+            return dt.datetime.strptime(t, fmt).strftime("%H:%M")
+        except ValueError:
+            continue
+    return t
+
+def _format_display_time(time_str: str) -> str:
+    try:
+        return dt.datetime.strptime(time_str, "%H:%M").strftime("%I:%M %p").lstrip("0")
+    except ValueError:
+        return time_str
+
 def _resolve_date_str(date_str: str | None, local_now: dt.datetime) -> str:
     local_today = local_now.strftime("%Y-%m-%d")
     if not date_str:
@@ -168,9 +185,7 @@ async def execute_tool(
                     return ev.result
 
         phone, date_str, time_str = req.args.get("phone"), req.args.get("date"), req.args.get("time")
-        try:
-            time_str = dt.datetime.strptime(time_str, "%I:%M %p").strftime("%H:%M")
-        except (ValueError, TypeError): pass
+        time_str = _normalize_time(time_str) or time_str
 
         contact = await _find_contact(db, phone)
 
@@ -193,13 +208,17 @@ async def execute_tool(
             result = {"error": "User not found, call identify_user first"}
         else:
             q2 = await db.execute(select(Booking).where(Booking.contact_id == contact.id, Booking.template_id == db_session.template_id, Booking.status == "active"))
-            result = {"status": "success", "appointments": [{"date": b.date, "time": b.time} for b in q2.scalars().all()]}
+            result = {
+                "status": "success",
+                "appointments": [
+                    {"date": b.date, "time": b.time, "display_time": _format_display_time(b.time)}
+                    for b in q2.scalars().all()
+                ],
+            }
 
     elif req.tool_name == "cancel_appointment":
         phone, d_str, t_str = req.args.get("phone"), req.args.get("date"), req.args.get("time")
-        try:
-            t_str = dt.datetime.strptime(t_str, "%I:%M %p").strftime("%H:%M")
-        except (ValueError, TypeError): pass
+        t_str = _normalize_time(t_str) or t_str
         contact = await _find_contact(db, phone)
         if not contact:
             result = {"error": "User not found"}
@@ -208,16 +227,29 @@ async def execute_tool(
             if b := q2.scalar_one_or_none():
                 b.status = "cancelled"
                 await db.commit()
-                result = {"status": "success", "message": f"Cancelled {d_str} at {t_str}"}
+                result = {
+                    "status": "success",
+                    "message": f"Cancelled {d_str} at {_format_display_time(t_str)}",
+                    "time": t_str,
+                    "display_time": _format_display_time(t_str),
+                }
             else:
-                result = {"error": "Appointment not found"}
+                q3 = await db.execute(select(Booking).where(
+                    Booking.contact_id == contact.id,
+                    Booking.template_id == db_session.template_id,
+                    Booking.date == d_str,
+                    Booking.status == "active",
+                ))
+                active = [
+                    {"time": b.time, "display_time": _format_display_time(b.time)}
+                    for b in q3.scalars().all()
+                ]
+                result = {"error": "Appointment not found", "active_appointments": active}
 
     elif req.tool_name == "modify_appointment":
         phone, o_date, o_time, n_date, n_time = req.args.get("phone"), req.args.get("old_date"), req.args.get("old_time"), req.args.get("new_date"), req.args.get("new_time")
-        try: o_time = dt.datetime.strptime(o_time, "%I:%M %p").strftime("%H:%M")
-        except (ValueError, TypeError): pass
-        try: n_time = dt.datetime.strptime(n_time, "%I:%M %p").strftime("%H:%M")
-        except (ValueError, TypeError): pass
+        o_time = _normalize_time(o_time) or o_time
+        n_time = _normalize_time(n_time) or n_time
 
         contact = await _find_contact(db, phone)
         if not contact:

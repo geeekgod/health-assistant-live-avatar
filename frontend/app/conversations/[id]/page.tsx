@@ -123,13 +123,7 @@ function RecordingSection({ data }: { data: SummaryResponse }) {
           </audio>
         ) : (
           <p className="text-sm text-muted-foreground">
-            No recording available for this session. Drop a{' '}
-            <code className="rounded-base border border-foreground bg-secondary px-1 text-xs">.wav</code> or{' '}
-            <code className="rounded-base border border-foreground bg-secondary px-1 text-xs">.mp3</code> file at{' '}
-            <code className="rounded-base border border-foreground bg-secondary px-1 text-xs">
-              backend/recordings/{data.session_id}.wav
-            </code>{' '}
-            to enable playback.
+            No recording was captured for this call.
           </p>
         )}
       </CardContent>

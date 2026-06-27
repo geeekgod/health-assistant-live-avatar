@@ -409,6 +409,9 @@ class HealthAssistantAgent(Agent):
 
         Args:
             phone: Caller phone number (must identify_user first)
+
+        Returns appointments with time (HH:MM 24-hour, use for cancel/modify tools)
+        and display_time (12-hour, use when speaking to the caller).
         """
         return await self._run_tool(
             "retrieve_appointments", {"phone": _parse_indian_mobile(phone) or phone}
@@ -423,7 +426,7 @@ class HealthAssistantAgent(Agent):
         Args:
             phone: Caller phone number (must identify_user first)
             date: Appointment date in YYYY-MM-DD format
-            time: Appointment time in HH:MM 24-hour format
+            time: Exact HH:MM time from retrieve_appointments (24-hour), not display_time
         """
         return await self._run_tool(
             "cancel_appointment",
@@ -478,8 +481,32 @@ class HealthAssistantAgent(Agent):
             pass
         return result_str
 
+async def _upload_recording(session_id: str, path: str) -> None:
+    with open(path, "rb") as handle:
+        data = handle.read()
+    async with httpx.AsyncClient(timeout=120.0) as client:
+        response = await client.post(
+            f"{BACKEND_URL.rstrip('/')}/api/sessions/{session_id}/recording",
+            files={"file": (os.path.basename(path), data, "audio/ogg")},
+            headers={"Authorization": f"Bearer {WORKER_API_SECRET}"},
+        )
+        response.raise_for_status()
 
-@server.rtc_session(agent_name="health-assistant")
+
+async def on_session_end(ctx: JobContext) -> None:
+    metadata = _parse_job_metadata(ctx)
+    session_id = _resolve_session_id(ctx, metadata)
+    try:
+        report = ctx.make_session_report()
+        audio_path = report.audio_recording_path
+        if audio_path and audio_path.exists():
+            await _upload_recording(session_id, str(audio_path))
+            logger.info("Uploaded session recording for %s", session_id)
+    except Exception as exc:
+        logger.warning("Failed to upload session recording for %s: %s", session_id, exc)
+
+
+@server.rtc_session(agent_name="health-assistant", on_session_end=on_session_end)
 async def entrypoint(ctx: JobContext) -> None:
     metadata = _parse_job_metadata(ctx)
     session_id = _resolve_session_id(ctx, metadata)
@@ -508,7 +535,9 @@ async def entrypoint(ctx: JobContext) -> None:
         "4. NEVER call fetch_slots for today unless the caller asked about today. "
         "When they ask about tomorrow, call fetch_slots with date \"tomorrow\" or tomorrow's YYYY-MM-DD from context.\n"
         "5. NEVER call end_conversation in the same turn as book_appointment, modify_appointment, or cancel_appointment. "
-        "First ask if the caller needs anything else; only call end_conversation after they clearly confirm they are done."
+        "First ask if the caller needs anything else; only call end_conversation after they clearly confirm they are done.\n"
+        "6. For appointments: use display_time when speaking to the caller. For cancel_appointment and modify_appointment, "
+        "pass the exact time field (HH:MM 24-hour) from retrieve_appointments — never convert spoken times yourself."
     )
     greeting = agent_config.get("greeting")
     tool_labels = agent_config.get("tool_labels") or {}
@@ -597,6 +626,7 @@ async def entrypoint(ctx: JobContext) -> None:
         agent=agent,
         room=ctx.room,
         room_input_options=RoomInputOptions(text_enabled=True),
+        record=True,
     )
 
 

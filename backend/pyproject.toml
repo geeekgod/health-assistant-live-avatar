@@ -13,6 +13,7 @@ dependencies = [
     "pyyaml",
     "livekit-api",
     "httpx",
+    "python-multipart",
 ]
 
 [tool.uv]

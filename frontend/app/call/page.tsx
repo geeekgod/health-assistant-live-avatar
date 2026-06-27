@@ -200,20 +200,8 @@ function CallUI({
         </div>
       )}
 
-      <section className="flex h-[45vh] shrink-0 flex-col border-b-2 border-foreground bg-secondary lg:h-full lg:w-[58%] lg:border-b-0 lg:border-r-2">
-        <AvatarVideo
-          templateName="Healthcare Front Desk"
-          templateIcon="🏥"
-          fallback={
-            <div className="text-center">
-              <div className="mb-3 text-5xl">🏥</div>
-              <p className="text-sm font-bold">Healthcare Front Desk</p>
-              <p className="mt-1 text-xs font-medium text-muted-foreground">
-                {session.avatarProvider.toUpperCase()} · {session.ttsProvider}
-              </p>
-            </div>
-          }
-        />
+      <section className="relative h-[45vh] shrink-0 overflow-hidden border-b-2 border-foreground bg-secondary lg:h-full lg:w-[58%] lg:border-b-0 lg:border-r-2">
+        <AvatarVideo templateName="Healthcare Front Desk" />
       </section>
 
       <section className="flex min-h-0 flex-1 flex-col lg:w-[42%]">

@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from typing import Any, Optional, Literal
 
 import yaml
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile
 from livekit import api
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "..", "templates")
+RECORDINGS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "recordings")
 AGENT_NAME = "health-assistant"
 
 class CreateSessionRequest(BaseModel):
@@ -178,6 +179,39 @@ async def create_session(req: CreateSessionRequest, db: AsyncSession = Depends(g
         "url": settings.LIVEKIT_URL,
         "agent_config": agent_config,
     }
+
+@router.post("/sessions/{session_id}/recording")
+async def upload_recording(
+    session_id: str,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    _worker: str = Depends(verify_worker),
+):
+    session_query = await db.execute(select(CallSession).where(CallSession.id == session_id))
+    if not session_query.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    content_type = (file.content_type or "").lower()
+    if "ogg" in content_type:
+        ext = ".ogg"
+    elif "wav" in content_type:
+        ext = ".wav"
+    elif "mpeg" in content_type or "mp3" in content_type:
+        ext = ".mp3"
+    else:
+        ext = ".webm"
+
+    data = await file.read()
+    if len(data) < 100:
+        raise HTTPException(status_code=400, detail="Recording too short or empty")
+
+    os.makedirs(RECORDINGS_DIR, exist_ok=True)
+    path = os.path.join(RECORDINGS_DIR, f"{session_id}{ext}")
+    with open(path, "wb") as handle:
+        handle.write(data)
+
+    return {"status": "ok", "recording_url": f"/api/sessions/{session_id}/recording"}
+
 
 @router.post("/sessions/{session_id}/end")
 async def end_session(session_id: str, db: AsyncSession = Depends(get_db)):
