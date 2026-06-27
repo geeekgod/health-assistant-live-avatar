@@ -46,7 +46,8 @@ LIVEKIT=cloud bash docker/scripts/deploy.sh
 | Script | Purpose |
 |--------|---------|
 | `scripts/lib.sh` | Shared helpers (LiveKit mode, HTTPS env patch) |
-| `scripts/doctor.sh` | Diagnose 502s, SSL, upstream mismatch |
+| `scripts/diagnose.sh` | Full diagnosis (nginx, SSL, docker, URLs, DNS) |
+| `scripts/doctor.sh` | Alias for `diagnose.sh` |
 | `scripts/setup-firewall.sh` | Open UFW 22/80/443 (+ LiveKit if local) |
 | `scripts/install.sh [blue\|green]` | Copy configs; skip livekit site when cloud |
 | `scripts/enable-ssl.sh` | Firewall + certbot + patch `docker/.env` |
@@ -71,7 +72,7 @@ sudo bash nginx/scripts/enable-ssl.sh
 ## Troubleshooting
 
 ```bash
-bash nginx/scripts/doctor.sh
+bash nginx/scripts/diagnose.sh
 ```
 
 | Symptom | Fix |
