@@ -44,9 +44,11 @@ export default function LobbyPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center p-6">
-      <Card className="w-full max-w-lg border-border bg-card/80">
+      <Card className="w-full max-w-lg">
         <CardHeader className="text-center">
-          <div className="mb-2 text-4xl">🏥</div>
+          <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-base border-2 border-foreground bg-secondary text-4xl shadow-brutal">
+            🏥
+          </div>
           <CardTitle className="text-2xl">Healthcare Front Desk</CardTitle>
           <CardDescription>
             Voice assistant with live avatar — pick providers and start a demo call
@@ -60,7 +62,7 @@ export default function LobbyPage() {
           )}
 
           <div className="space-y-3">
-            <Label className="text-sm font-medium">Avatar provider</Label>
+            <Label>Avatar provider</Label>
             <RadioGroup
               value={avatar}
               onValueChange={(v) => setAvatar(v as AvatarProvider)}
@@ -68,8 +70,10 @@ export default function LobbyPage() {
             >
               <Label
                 htmlFor="avatar-bey"
-                className={`flex cursor-pointer items-center gap-2 rounded-lg border p-3 transition-colors ${
-                  avatar === 'bey' ? 'border-primary bg-primary/5' : 'border-border'
+                className={`flex cursor-pointer items-center gap-2 rounded-base border-2 p-3 font-bold shadow-brutal-sm transition-all ${
+                  avatar === 'bey'
+                    ? 'border-foreground bg-accent'
+                    : 'border-foreground bg-card'
                 }`}
               >
                 <RadioGroupItem value="bey" id="avatar-bey" />
@@ -77,8 +81,10 @@ export default function LobbyPage() {
               </Label>
               <Label
                 htmlFor="avatar-tavus"
-                className={`flex cursor-pointer items-center gap-2 rounded-lg border p-3 transition-colors ${
-                  avatar === 'tavus' ? 'border-primary bg-primary/5' : 'border-border'
+                className={`flex cursor-pointer items-center gap-2 rounded-base border-2 p-3 font-bold shadow-brutal-sm transition-all ${
+                  avatar === 'tavus'
+                    ? 'border-foreground bg-accent'
+                    : 'border-foreground bg-card'
                 }`}
               >
                 <RadioGroupItem value="tavus" id="avatar-tavus" />
@@ -88,7 +94,7 @@ export default function LobbyPage() {
           </div>
 
           <div className="space-y-3">
-            <Label className="text-sm font-medium">TTS provider</Label>
+            <Label>TTS provider</Label>
             <RadioGroup
               value={tts}
               onValueChange={(v) => setTts(v as TtsProvider)}
@@ -96,8 +102,10 @@ export default function LobbyPage() {
             >
               <Label
                 htmlFor="tts-cartesia"
-                className={`flex cursor-pointer items-center gap-2 rounded-lg border p-3 transition-colors ${
-                  tts === 'cartesia' ? 'border-primary bg-primary/5' : 'border-border'
+                className={`flex cursor-pointer items-center gap-2 rounded-base border-2 p-3 font-bold shadow-brutal-sm transition-all ${
+                  tts === 'cartesia'
+                    ? 'border-foreground bg-primary text-primary-foreground'
+                    : 'border-foreground bg-card'
                 }`}
               >
                 <RadioGroupItem value="cartesia" id="tts-cartesia" />
@@ -105,8 +113,10 @@ export default function LobbyPage() {
               </Label>
               <Label
                 htmlFor="tts-gemini"
-                className={`flex cursor-pointer items-center gap-2 rounded-lg border p-3 transition-colors ${
-                  tts === 'gemini' ? 'border-primary bg-primary/5' : 'border-border'
+                className={`flex cursor-pointer items-center gap-2 rounded-base border-2 p-3 font-bold shadow-brutal-sm transition-all ${
+                  tts === 'gemini'
+                    ? 'border-foreground bg-primary text-primary-foreground'
+                    : 'border-foreground bg-card'
                 }`}
               >
                 <RadioGroupItem value="gemini" id="tts-gemini" />
@@ -119,8 +129,11 @@ export default function LobbyPage() {
             {loading ? 'Starting session…' : 'Start call'}
           </Button>
 
-          <p className="text-center text-sm text-muted-foreground">
-            <Link href="/conversations" className="text-primary hover:underline">
+          <p className="text-center text-sm font-medium text-muted-foreground">
+            <Link
+              href="/conversations"
+              className="font-bold text-foreground underline decoration-2 underline-offset-4 hover:text-primary"
+            >
               View past conversations
             </Link>
           </p>

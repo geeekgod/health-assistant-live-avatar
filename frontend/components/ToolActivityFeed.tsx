@@ -39,16 +39,16 @@ export default function ToolActivityFeed({ events, toolLabels }: ToolActivityFee
   }, [events.length])
 
   return (
-    <div className="flex min-h-0 flex-col border-t border-border">
-      <div className="shrink-0 px-4 py-3">
-        <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
+    <div className="flex min-h-0 flex-col border-t-2 border-foreground bg-muted/50">
+      <div className="shrink-0 border-b-2 border-foreground bg-secondary px-4 py-3">
+        <p className="font-mono text-xs font-bold uppercase tracking-widest">
           Tool activity
         </p>
       </div>
       <ScrollArea className="max-h-40 min-h-0 flex-1">
-        <div className="space-y-2 px-4 pb-4 font-mono text-sm">
+        <div className="space-y-2 p-4 font-mono text-sm">
           {events.length === 0 ? (
-            <p className="text-xs text-muted-foreground/60">No tools invoked yet</p>
+            <p className="text-xs font-medium text-muted-foreground">No tools invoked yet</p>
           ) : (
             events.map((event, i) => {
               const args = event.result?.args as Record<string, unknown> | undefined
@@ -64,10 +64,10 @@ export default function ToolActivityFeed({ events, toolLabels }: ToolActivityFee
               return (
                 <div
                   key={`${event.tool}-${event.timestamp}-${i}`}
-                  className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3"
+                  className="rounded-base border-2 border-foreground bg-card p-3 shadow-brutal-sm"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="flex items-center gap-2 text-xs font-medium text-amber-100">
+                    <span className="flex items-center gap-2 text-xs font-bold">
                       <Wrench className="h-3 w-3" />
                       {toolLabel(event, toolLabels)}
                     </span>
@@ -83,12 +83,12 @@ export default function ToolActivityFeed({ events, toolLabels }: ToolActivityFee
                     </Badge>
                   </div>
                   {displayArgs && Object.keys(displayArgs).length > 0 && (
-                    <pre className="mt-2 overflow-x-auto rounded-md bg-black/30 p-2 text-[10px] text-muted-foreground">
+                    <pre className="mt-2 overflow-x-auto rounded-base border-2 border-foreground bg-secondary p-2 text-[10px]">
                       {JSON.stringify(displayArgs, null, 2)}
                     </pre>
                   )}
                   {displayResult && Object.keys(displayResult).length > 0 && (
-                    <pre className="mt-2 overflow-x-auto rounded-md bg-black/30 p-2 text-[10px] text-emerald-200/80">
+                    <pre className="mt-2 overflow-x-auto rounded-base border-2 border-foreground bg-accent/30 p-2 text-[10px]">
                       {JSON.stringify(displayResult, null, 2)}
                     </pre>
                   )}

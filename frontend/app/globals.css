@@ -4,24 +4,25 @@
 
 @layer base {
   :root {
-    --background: 240 10% 4%;
-    --foreground: 0 0% 98%;
-    --card: 240 6% 8%;
-    --card-foreground: 0 0% 98%;
-    --primary: 217 91% 60%;
+    --background: 48 100% 96%;
+    --foreground: 0 0% 0%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 0%;
+    --primary: 262 83% 58%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 240 4% 14%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 4% 14%;
-    --muted-foreground: 240 5% 65%;
-    --accent: 217 91% 60%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 4% 16%;
-    --input: 240 4% 16%;
-    --ring: 217 91% 60%;
-    --radius: 0.75rem;
+    --secondary: 48 100% 88%;
+    --secondary-foreground: 0 0% 0%;
+    --muted: 48 40% 92%;
+    --muted-foreground: 0 0% 30%;
+    --accent: 142 69% 58%;
+    --accent-foreground: 0 0% 0%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 0%;
+    --input: 0 0% 0%;
+    --ring: 0 0% 0%;
+    --radius: 0.5rem;
+    --shadow: 0 0% 0%;
   }
 
   * {
@@ -31,6 +32,27 @@
   body {
     @apply bg-background text-foreground antialiased;
     min-height: 100vh;
+    background-image: radial-gradient(circle at 1px 1px, hsl(0 0% 0% / 0.06) 1px, transparent 0);
+    background-size: 24px 24px;
+  }
+}
+
+@layer utilities {
+  .neo-shadow {
+    box-shadow: 4px 4px 0 0 hsl(var(--shadow));
+  }
+
+  .neo-shadow-sm {
+    box-shadow: 2px 2px 0 0 hsl(var(--shadow));
+  }
+
+  .neo-pressable {
+    @apply transition-all duration-100;
+  }
+
+  .neo-pressable:active:not(:disabled) {
+    transform: translate(4px, 4px);
+    box-shadow: none;
   }
 }
 

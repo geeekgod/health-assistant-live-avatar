@@ -5,6 +5,10 @@ const config: Config = {
   content: ['./app/**/*.{ts,tsx}', './components/**/*.{ts,tsx}'],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['var(--font-dm-sans)', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-dm-mono)', 'ui-monospace', 'monospace'],
+      },
       colors: {
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
@@ -37,9 +41,14 @@ const config: Config = {
         },
       },
       borderRadius: {
+        base: 'var(--radius)',
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
+      },
+      boxShadow: {
+        brutal: '4px 4px 0 0 hsl(var(--shadow))',
+        'brutal-sm': '2px 2px 0 0 hsl(var(--shadow))',
       },
     },
   },

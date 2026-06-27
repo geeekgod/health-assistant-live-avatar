@@ -83,16 +83,18 @@ function TranscriptFeed({ transcript }: { transcript: TranscriptSegment[] }) {
               <div
                 key={`${segment.speaker}-${segment.id}-${segment.timestamp}`}
                 className={cn(
-                  'rounded-lg border p-3 transition-colors',
-                  isUser ? 'border-border bg-secondary/40' : 'border-primary/20 bg-primary/5',
+                  'rounded-base border-2 p-3 shadow-brutal-sm transition-all',
+                  isUser
+                    ? 'border-foreground bg-secondary'
+                    : 'border-foreground bg-accent/40',
                   !segment.isFinal && 'opacity-70',
                 )}
               >
-                <p className="mb-1.5 text-xs uppercase tracking-wider text-muted-foreground">
+                <p className="mb-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
                   {isUser ? 'You' : 'Agent'}
                   {!segment.isFinal && ' · listening…'}
                 </p>
-                <p className="leading-relaxed text-foreground/90">{segment.text}</p>
+                <p className="leading-relaxed">{segment.text}</p>
               </div>
             )
           })
@@ -191,20 +193,22 @@ function CallUI({
   return (
     <main className="flex h-screen w-full flex-col overflow-hidden lg:flex-row">
       {isEnding && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-          <p className="text-muted-foreground">Finalizing call…</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90">
+          <div className="rounded-base border-2 border-foreground bg-card px-8 py-6 font-bold shadow-brutal">
+            Finalizing call…
+          </div>
         </div>
       )}
 
-      <section className="flex h-[45vh] shrink-0 flex-col border-b border-border bg-black/50 lg:h-full lg:w-[58%] lg:border-b-0 lg:border-r">
+      <section className="flex h-[45vh] shrink-0 flex-col border-b-2 border-foreground bg-secondary lg:h-full lg:w-[58%] lg:border-b-0 lg:border-r-2">
         <AvatarVideo
           templateName="Healthcare Front Desk"
           templateIcon="🏥"
           fallback={
             <div className="text-center">
               <div className="mb-3 text-5xl">🏥</div>
-              <p className="text-sm font-medium text-foreground/80">Healthcare Front Desk</p>
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="text-sm font-bold">Healthcare Front Desk</p>
+              <p className="mt-1 text-xs font-medium text-muted-foreground">
                 {session.avatarProvider.toUpperCase()} · {session.ttsProvider}
               </p>
             </div>
@@ -213,8 +217,8 @@ function CallUI({
       </section>
 
       <section className="flex min-h-0 flex-1 flex-col lg:w-[42%]">
-        <div className="shrink-0 border-b border-border px-4 py-3">
-          <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
+        <div className="shrink-0 border-b-2 border-foreground bg-card px-4 py-3">
+          <p className="font-mono text-xs font-bold uppercase tracking-widest">
             Live transcript
           </p>
         </div>
@@ -222,7 +226,7 @@ function CallUI({
         <TranscriptFeed transcript={transcript} />
         <ToolActivityFeed events={toolEvents} toolLabels={toolLabels} />
 
-        <div className="shrink-0 space-y-3 border-t border-border p-4">
+        <div className="shrink-0 space-y-3 border-t-2 border-foreground bg-card p-4">
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             <Badge variant="outline" className="font-mono font-normal">
               {connected ? 'Live' : state.status}

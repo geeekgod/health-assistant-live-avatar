@@ -24,7 +24,7 @@ function WaveformFallback({ isSpeaking }: { isSpeaking: boolean }) {
       {Array.from({ length: 12 }).map((_, i) => (
         <div
           key={i}
-          className="w-1.5 rounded-full bg-primary/80"
+          className="w-2 rounded-sm border border-foreground bg-primary"
           style={{
             height: isSpeaking ? `${16 + (i % 4) * 10}px` : '12px',
             animation: isSpeaking
@@ -116,7 +116,7 @@ export default function AvatarVideo({ fallback, templateName, templateIcon }: Av
         autoPlay
         playsInline
         muted
-        className={`relative z-10 max-h-full max-w-full rounded-2xl border border-white/10 bg-black object-contain shadow-2xl transition-opacity duration-500 ${
+        className={`relative z-10 max-h-full max-w-full rounded-base border-2 border-foreground bg-card object-contain shadow-brutal transition-opacity duration-500 ${
           hasVideo ? 'opacity-100' : 'pointer-events-none absolute opacity-0'
         }`}
       />
@@ -124,29 +124,24 @@ export default function AvatarVideo({ fallback, templateName, templateIcon }: Av
       {!hasVideo ? (
         <div className="flex flex-col items-center justify-center gap-6">
           <div
-            className={`rounded-full border-2 p-10 transition-all duration-500 ${
-              isSpeaking ? 'scale-105 border-primary' : 'border-primary/30'
+            className={`rounded-base border-2 border-foreground bg-card p-10 shadow-brutal transition-all duration-300 ${
+              isSpeaking ? 'translate-x-[-2px] translate-y-[-2px] bg-accent/30' : ''
             }`}
           >
             {fallback ?? <WaveformFallback isSpeaking={isSpeaking} />}
           </div>
-          <p className="max-w-sm text-center text-sm text-muted-foreground">
-            {status || 'Voice assistant active — avatar video loading…'}
-          </p>
+          <p className="max-w-sm text-center text-sm font-bold">{status || 'Voice assistant active'}</p>
         </div>
       ) : (
         <div
-          className={`pointer-events-none absolute inset-6 rounded-2xl border-2 transition-all duration-700 md:inset-10 ${
-            isSpeaking ? 'border-primary/60 opacity-100' : 'border-primary/20 opacity-30'
+          className={`pointer-events-none absolute inset-6 rounded-base border-2 border-foreground transition-all duration-500 md:inset-10 ${
+            isSpeaking ? 'opacity-100 shadow-brutal' : 'opacity-40'
           }`}
         />
       )}
 
       {templateName && (
-        <Badge
-          variant="secondary"
-          className="absolute bottom-4 left-4 z-20 gap-1.5 bg-black/60 px-3 py-1 text-xs backdrop-blur-sm"
-        >
+        <Badge variant="secondary" className="absolute bottom-4 left-4 z-20 gap-1.5">
           {templateIcon && <span>{templateIcon}</span>}
           {templateName}
         </Badge>

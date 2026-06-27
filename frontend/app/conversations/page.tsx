@@ -52,10 +52,13 @@ export default function ConversationsPage() {
       <div className="mx-auto max-w-3xl">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <Link href="/" className="text-sm text-primary hover:underline">
+            <Link
+              href="/"
+              className="text-sm font-bold underline decoration-2 underline-offset-4 hover:text-primary"
+            >
               ← New call
             </Link>
-            <h1 className="mt-4 text-3xl font-bold">Conversations</h1>
+            <h1 className="mt-4 text-4xl font-bold tracking-tight">Conversations</h1>
             <p className="mt-2 text-sm text-muted-foreground">
               Past calls with transcripts, tool activity, and summaries
             </p>
@@ -78,7 +81,10 @@ export default function ConversationsPage() {
               <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
                 <MessageSquare className="h-10 w-10 text-muted-foreground/50" />
                 <p className="text-sm text-muted-foreground">No conversations yet.</p>
-                <Link href="/" className="text-sm text-primary hover:underline">
+                <Link
+                  href="/"
+                  className="font-bold underline decoration-2 underline-offset-4 hover:text-primary"
+                >
                   Start your first call
                 </Link>
               </CardContent>
@@ -87,7 +93,7 @@ export default function ConversationsPage() {
 
           {items.map((item) => (
             <Link key={item.session_id} href={`/conversations/${item.session_id}`}>
-              <Card className="transition-colors hover:border-primary/40 hover:bg-card/80">
+              <Card className="neo-pressable transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5">
                 <CardContent className="flex items-center gap-4 py-4">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">

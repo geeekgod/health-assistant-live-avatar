@@ -29,9 +29,9 @@ const TOOL_LABELS: Record<string, string> = {
 function LoadingSkeleton() {
   return (
     <div className="animate-pulse space-y-4">
-      <div className="h-16 rounded-lg bg-secondary" />
-      <div className="h-48 rounded-lg bg-secondary" />
-      <div className="h-64 rounded-lg bg-secondary" />
+      <div className="h-16 rounded-base border-2 border-foreground bg-secondary shadow-brutal-sm" />
+      <div className="h-48 rounded-base border-2 border-foreground bg-secondary shadow-brutal-sm" />
+      <div className="h-64 rounded-base border-2 border-foreground bg-secondary shadow-brutal-sm" />
       <p className="text-center text-sm text-muted-foreground">Loading conversation…</p>
     </div>
   )
@@ -80,9 +80,9 @@ function BriefSummaryCard({ data }: { data: SummaryResponse }) {
       : null)
 
   return (
-    <Card className="border-primary/30 bg-primary/5">
+    <Card className="bg-accent/20">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base font-medium">At a glance</CardTitle>
+        <CardTitle className="text-base">At a glance</CardTitle>
       </CardHeader>
       <CardContent>
         {brief ? (
@@ -124,9 +124,9 @@ function RecordingSection({ data }: { data: SummaryResponse }) {
         ) : (
           <p className="text-sm text-muted-foreground">
             No recording available for this session. Drop a{' '}
-            <code className="rounded bg-secondary px-1 text-xs">.wav</code> or{' '}
-            <code className="rounded bg-secondary px-1 text-xs">.mp3</code> file at{' '}
-            <code className="rounded bg-secondary px-1 text-xs">
+            <code className="rounded-base border border-foreground bg-secondary px-1 text-xs">.wav</code> or{' '}
+            <code className="rounded-base border border-foreground bg-secondary px-1 text-xs">.mp3</code> file at{' '}
+            <code className="rounded-base border border-foreground bg-secondary px-1 text-xs">
               backend/recordings/{data.session_id}.wav
             </code>{' '}
             to enable playback.
@@ -155,10 +155,10 @@ function TranscriptSection({ transcript }: { transcript: TranscriptEntry[] }) {
               {transcript.map((entry, i) => (
                 <div
                   key={`${entry.role}-${i}`}
-                  className={`rounded-lg px-3 py-2 text-sm ${
+                  className={`rounded-base border-2 px-3 py-2 text-sm shadow-brutal-sm ${
                     entry.role === 'user'
-                      ? 'ml-6 bg-blue-500/10 text-blue-100'
-                      : 'mr-6 bg-secondary/80'
+                      ? 'ml-6 border-foreground bg-secondary'
+                      : 'mr-6 border-foreground bg-accent/30'
                   }`}
                 >
                   <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
@@ -202,10 +202,10 @@ function ToolTimeline({ events }: { events: ToolEventRecord[] }) {
                 {i < events.length - 1 && (
                   <div className="absolute left-[11px] top-6 h-[calc(100%-12px)] w-px bg-border" />
                 )}
-                <div className="relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-500/20 text-[10px] font-bold text-amber-200">
+                <div className="relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-base border-2 border-foreground bg-secondary text-[10px] font-bold">
                   {i + 1}
                 </div>
-                <div className="min-w-0 flex-1 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3">
+                <div className="min-w-0 flex-1 rounded-base border-2 border-foreground bg-card p-3 shadow-brutal-sm">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="text-sm font-medium">{toolLabel(event.tool_name)}</span>
                     <div className="flex items-center gap-2">
@@ -224,7 +224,7 @@ function ToolTimeline({ events }: { events: ToolEventRecord[] }) {
                       <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
                         Input
                       </p>
-                      <pre className="mt-1 overflow-x-auto rounded-md bg-black/30 p-2 text-[11px] text-muted-foreground">
+                      <pre className="mt-1 overflow-x-auto rounded-base border-2 border-foreground bg-secondary p-2 text-[11px]">
                         {JSON.stringify(formatToolPayload(event.args), null, 2)}
                       </pre>
                     </div>
@@ -234,7 +234,7 @@ function ToolTimeline({ events }: { events: ToolEventRecord[] }) {
                       <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
                         Output
                       </p>
-                      <pre className="mt-1 overflow-x-auto rounded-md bg-black/30 p-2 text-[11px] text-emerald-200/80">
+                      <pre className="mt-1 overflow-x-auto rounded-base border-2 border-foreground bg-accent/30 p-2 text-[11px]">
                         {JSON.stringify(formatToolPayload(event.result), null, 2)}
                       </pre>
                     </div>
@@ -265,7 +265,7 @@ function StructuredFields({ summary }: { summary: Record<string, unknown> }) {
       </CardHeader>
       <CardContent className="grid gap-3 sm:grid-cols-2">
         {fields.map(([key, val]) => (
-          <div key={key} className="rounded-md bg-secondary/50 p-3">
+          <div key={key} className="rounded-base border-2 border-foreground bg-secondary p-3 shadow-brutal-sm">
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
               {formatFieldLabel(key)}
             </p>
@@ -329,10 +329,13 @@ export default function ConversationDetailPage({ params }: { params: Promise<{ i
   return (
     <main className="min-h-screen p-6 md:p-10">
       <div className="mx-auto max-w-4xl">
-        <Link href="/conversations" className="text-sm text-primary hover:underline">
+        <Link
+          href="/conversations"
+          className="text-sm font-bold underline decoration-2 underline-offset-4 hover:text-primary"
+        >
           ← All conversations
         </Link>
-        <h1 className="mt-4 text-3xl font-bold">Conversation</h1>
+        <h1 className="mt-4 text-4xl font-bold tracking-tight">Conversation</h1>
         {sessionId && (
           <p className="mt-2 font-mono text-sm text-muted-foreground">{sessionId}</p>
         )}
