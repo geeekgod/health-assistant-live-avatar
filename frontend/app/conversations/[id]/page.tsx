@@ -15,6 +15,7 @@ import {
   type TranscriptEntry,
 } from '@/lib/api'
 import { formatIndianPhone, formatToolPayload } from '@/lib/phone'
+import CallRecordingPlayer from '@/components/CallRecordingPlayer'
 
 const TOOL_LABELS: Record<string, string> = {
   identify_user: 'Looking up patient record',
@@ -118,9 +119,7 @@ function RecordingSection({ data, waiting }: { data: SummaryResponse; waiting?: 
       </CardHeader>
       <CardContent>
         {src ? (
-          <audio controls preload="metadata" className="w-full" src={src}>
-            Your browser does not support audio playback.
-          </audio>
+          <CallRecordingPlayer src={src} />
         ) : waiting ? (
           <p className="text-sm text-muted-foreground">Processing call recording…</p>
         ) : (
