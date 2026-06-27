@@ -1,0 +1,92 @@
+# General
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.venv
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+.env
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+backend/health_assistant.db
+backend/liveavatar.db
+
+# Ruff / Linters
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+.coverage
+coverage.xml
+
+# Node / Frontend
+node_modules/
+.pnp
+.pnp.js
+coverage/
+.next/
+out/
+build/
+dist/
+.nuxt/
+.vuepress/dist
+.serverless/
+.npm/
+.yarn/
+*.log
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.fleet/
+
+# OS / Temp
+tmp/
+temp/
+logs/
+*.bak
+*.tmp
+
+# Vercel / Deploy
+.vercel/
