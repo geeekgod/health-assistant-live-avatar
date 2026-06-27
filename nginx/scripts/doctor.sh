@@ -33,6 +33,12 @@ esac
 
 log "Expected ports — frontend:$FE backend:$BE"
 
+if ! nginx_site_configs_ok; then
+  fail "nginx site configs empty or missing server_name — run: sudo bash nginx/scripts/install.sh"
+else
+  ok "nginx site configs present"
+fi
+
 if [[ -f /etc/nginx/mykare/upstream-active.conf ]]; then
   log "upstream-active.conf:"
   sed 's/^/  /' /etc/nginx/mykare/upstream-active.conf
@@ -77,16 +83,17 @@ docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' 2>/dev/null \
 
 log ""
 if nginx_ssl_configured; then
-  ok "SSL certificates configured"
-  if nginx_env_uses_http; then
-    warn "docker/.env still uses http:// API URL"
-    warn "Fix: sudo bash nginx/scripts/enable-ssl.sh  # patches .env, then redeploy"
-  else
-    ok "docker/.env uses HTTPS API URL"
-  fi
+  ok "SSL configured in nginx (:443)"
+elif nginx_cert_exists; then
+  warn "Certificate exists but nginx has no HTTPS — run: sudo bash nginx/scripts/enable-ssl.sh"
 else
-  warn "SSL not configured — HTTP only"
-  warn "Fix: sudo bash nginx/scripts/enable-ssl.sh"
+  warn "SSL not configured — run: sudo bash nginx/scripts/enable-ssl.sh"
+fi
+
+if nginx_ssl_configured && nginx_env_uses_http; then
+  warn "docker/.env still uses http:// API URL — redeploy after enable-ssl.sh"
+elif nginx_ssl_configured; then
+  ok "docker/.env uses HTTPS API URL"
 fi
 
 log ""

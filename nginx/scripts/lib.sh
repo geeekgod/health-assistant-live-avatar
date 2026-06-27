@@ -66,8 +66,18 @@ nginx_patch_env_https() {
 }
 
 nginx_ssl_configured() {
-  [[ -d "/etc/letsencrypt/live/${DOMAIN_BACKEND}" ]] \
-    || grep -rq 'listen .*443' /etc/nginx/sites-enabled/ 2>/dev/null
+  grep -rq 'listen .*443' /etc/nginx/sites-enabled/ 2>/dev/null \
+    && grep -rq 'ssl_certificate' /etc/nginx/sites-enabled/ 2>/dev/null
+}
+
+nginx_cert_exists() {
+  [[ -d "/etc/letsencrypt/live/${DOMAIN_FRONTEND}" ]] \
+    || certbot certificates 2>/dev/null | grep -q "Certificate Name: ${DOMAIN_FRONTEND}"
+}
+
+nginx_site_configs_ok() {
+  grep -rq "server_name ${DOMAIN_FRONTEND}" /etc/nginx/sites-enabled/ 2>/dev/null \
+    && grep -rq "server_name ${DOMAIN_BACKEND}" /etc/nginx/sites-enabled/ 2>/dev/null
 }
 
 nginx_env_uses_http() {

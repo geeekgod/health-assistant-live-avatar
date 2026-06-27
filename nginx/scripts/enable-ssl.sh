@@ -22,6 +22,16 @@ fi
 
 log "LiveKit mode: ${LIVEKIT_MODE} — cert domains: ${DOMAINS[*]}"
 
+log "Ensuring nginx site configs from repo…"
+bash "$SCRIPT_DIR/install.sh"
+
+if ! nginx_site_configs_ok; then
+  log "ERROR: nginx sites missing server_name blocks."
+  log "Check: ls -la /etc/nginx/sites-enabled/ && cat /etc/nginx/sites-enabled/mykare-frontend"
+  exit 1
+fi
+log "nginx site configs OK"
+
 log "Opening firewall (UFW)…"
 bash "$SCRIPT_DIR/setup-firewall.sh"
 
@@ -33,18 +43,41 @@ fi
 
 log "DigitalOcean: Networking → Firewalls → allow TCP 80, 443 inbound"
 
+CERTBOT_COMMON=(--nginx --redirect)
+if [[ -n "${CERTBOT_EMAIL:-}" ]]; then
+  CERTBOT_COMMON+=(--non-interactive --agree-tos -m "$CERTBOT_EMAIL")
+fi
+
 ARGS=()
 for d in "${DOMAINS[@]}"; do
   ARGS+=(-d "$d")
 done
 
-log "Requesting certificates…"
-if [[ -n "${CERTBOT_EMAIL:-}" ]]; then
-  certbot --nginx --non-interactive --agree-tos --redirect \
-    -m "$CERTBOT_EMAIL" "${ARGS[@]}"
+if nginx_ssl_configured; then
+  log "HTTPS already configured in nginx"
+elif nginx_cert_exists; then
+  log "Certificate on disk — installing into nginx…"
+  certbot install --cert-name "$DOMAIN_FRONTEND" "${CERTBOT_COMMON[@]}"
 else
-  log "Tip: set CERTBOT_EMAIL=you@example.com for non-interactive certbot"
-  certbot --nginx "${ARGS[@]}"
+  log "Requesting certificates…"
+  if [[ -n "${CERTBOT_EMAIL:-}" ]]; then
+    certbot --nginx --non-interactive --agree-tos --redirect \
+      -m "$CERTBOT_EMAIL" "${ARGS[@]}"
+  else
+    log "Tip: set CERTBOT_EMAIL=you@example.com for non-interactive certbot"
+    certbot --nginx "${ARGS[@]}"
+  fi
+fi
+
+if ! nginx_ssl_configured; then
+  log "WARN: cert may exist but nginx still has no :443 — retrying install…"
+  certbot install --cert-name "$DOMAIN_FRONTEND" "${CERTBOT_COMMON[@]}" || true
+fi
+
+if ! nginx_ssl_configured; then
+  log "ERROR: SSL install failed. After fixing nginx configs, run:"
+  log "  sudo certbot install --cert-name ${DOMAIN_FRONTEND} --nginx --redirect"
+  exit 1
 fi
 
 nginx -t
@@ -58,5 +91,8 @@ else
   log "  BACKEND_URL=${HTTPS_API_URL}"
 fi
 
-log "SSL enabled. Redeploy to rebuild frontend with HTTPS API URL:"
+log "SSL enabled. Verify:"
+log "  curl -I https://${DOMAIN_FRONTEND}/"
+log "  curl -I https://${DOMAIN_BACKEND}/health/ready"
+log "Redeploy to rebuild frontend:"
 log "  cd ${REPO_ROOT} && LIVEKIT=${LIVEKIT_MODE} bash docker/scripts/deploy.sh"
