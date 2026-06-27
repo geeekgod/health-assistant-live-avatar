@@ -176,7 +176,42 @@ _INVALID_IDENTIFY_MARKERS = (
     "phone number",
 )
 
-_FAKE_PHONES = frozenset({"1234567890", "0000000000", "1111111111", "9999999999"})
+_FAKE_PHONES = frozenset({"1234567890", "0000000000", "1111111111"})
+_INDIAN_MOBILE_RE = re.compile(r"^[6-9]\d{9}$")
+
+
+def _parse_indian_mobile(phone: str) -> str | None:
+    digits = re.sub(r"\D", "", (phone or "").strip())
+    if digits.startswith("91") and len(digits) == 12:
+        digits = digits[2:]
+    if len(digits) == 11 and digits.startswith("0"):
+        digits = digits[1:]
+    if not _INDIAN_MOBILE_RE.match(digits):
+        return None
+    return digits
+
+
+def _format_indian_phone(phone: str) -> str:
+    ten = _parse_indian_mobile(phone)
+    return f"+91{ten}" if ten else phone
+
+
+def _display_tool_args(args: dict) -> dict:
+    out = dict(args)
+    if "phone" in out and out["phone"] is not None:
+        ten = _parse_indian_mobile(str(out["phone"]))
+        if ten:
+            out["phone"] = f"+91{ten}"
+    return out
+
+
+def _display_tool_result(result: dict) -> dict:
+    out = dict(result)
+    if "phone" in out and out["phone"] is not None:
+        ten = _parse_indian_mobile(str(out["phone"]))
+        if ten:
+            out["phone"] = f"+91{ten}"
+    return out
 
 
 def _normalize_slot_date(date: str) -> str:
@@ -187,10 +222,6 @@ def _normalize_slot_date(date: str) -> str:
     if normalized == "tomorrow":
         return (now + timedelta(days=1)).strftime("%Y-%m-%d")
     return (date or "").strip()
-
-
-def _normalize_phone(phone: str) -> str:
-    return re.sub(r"\D", "", (phone or "").strip())
 
 
 def _validate_identify_args(phone: str, name: str) -> str | None:
@@ -207,9 +238,12 @@ def _validate_identify_args(phone: str, name: str) -> str | None:
             "full name and phone number, then call identify_user again."
         )
 
-    digits = _normalize_phone(phone)
-    if len(digits) < 10 or len(digits) > 15:
-        return "Phone must be 10–15 digits from the caller. Ask them to say their number again."
+    digits = _parse_indian_mobile(phone)
+    if not digits:
+        return (
+            "Phone must be a valid 10-digit Indian mobile starting with 6, 7, 8, or 9. "
+            "Ask for 10 digits only — no +91 or country code."
+        )
 
     if digits in _FAKE_PHONES:
         return "That phone number looks like a placeholder. Ask for the caller's real phone number."
@@ -240,8 +274,7 @@ class HealthAssistantAgent(Agent):
             instructions=system_prompt
             + "\nNever call identify_user twice for the same phone in one call."
             + "\nNever call identify_user until the caller has clearly spoken both their full name "
-            "and a real phone number (digits only). Do not pass placeholders like 'unknown' or "
-            "'awaiting user input'."
+            "and a 10-digit Indian mobile number (6–9 as first digit, no +91). Do not pass placeholders."
         )
 
     async def on_enter(self) -> None:
@@ -255,19 +288,16 @@ class HealthAssistantAgent(Agent):
     async def _run_tool(self, tool_name: str, args: dict) -> str:
         message = self._tool_labels.get(tool_name, tool_name.replace("_", " "))
 
-        log_args = dict(args)
-        if "phone" in log_args and len(log_args["phone"]) >= 4:
-            log_args["phone"] = "***-***-" + log_args["phone"][-4:]
-
+        display_args = _display_tool_args(args)
         logger.info(
             "Tool call entry | session_id=%s | tool=%s | args=%s",
             self._session_id,
             tool_name,
-            log_args,
+            display_args,
         )
 
         await _emit_tool_event(
-            self._room, self._session_id, tool_name, "running", message, {"args": args}
+            self._room, self._session_id, tool_name, "running", message, {"args": display_args}
         )
 
         try:
@@ -277,16 +307,18 @@ class HealthAssistantAgent(Agent):
             else:
                 status = "done"
 
+            display_result = _display_tool_result(result)
+
             logger.info(
                 "Tool call exit | session_id=%s | tool=%s | status=%s | result=%s",
                 self._session_id,
                 tool_name,
                 status,
-                result,
+                display_result,
             )
 
             await _emit_tool_event(
-                self._room, self._session_id, tool_name, status, message, result
+                self._room, self._session_id, tool_name, status, message, display_result
             )
             return json.dumps(result)
         except Exception as exc:
@@ -306,10 +338,10 @@ class HealthAssistantAgent(Agent):
         """Look up or create a contact by phone number and name.
 
         Args:
-            phone: Caller phone number including area code (digits the caller stated)
+            phone: 10-digit Indian mobile (without +91), starting with 6, 7, 8, or 9
             name: Caller full name (as stated by the caller)
         """
-        digits = _normalize_phone(phone)
+        digits = _parse_indian_mobile(phone)
         if self._identified_phone == digits and self._identified_result is not None:
             return self._identified_result
 
@@ -329,7 +361,7 @@ class HealthAssistantAgent(Agent):
                 "identify_user",
                 "error",
                 message,
-                {"args": {"phone": phone, "name": name}, **result},
+                {"args": _display_tool_args({"phone": phone, "name": name}), **result},
             )
             return json.dumps(result)
 
@@ -367,7 +399,8 @@ class HealthAssistantAgent(Agent):
             time: Appointment time in HH:MM 24-hour format
         """
         return await self._run_tool(
-            "book_appointment", {"phone": phone, "date": date, "time": time}
+            "book_appointment",
+            {"phone": _parse_indian_mobile(phone) or phone, "date": date, "time": time},
         )
 
     @function_tool
@@ -378,7 +411,7 @@ class HealthAssistantAgent(Agent):
             phone: Caller phone number (must identify_user first)
         """
         return await self._run_tool(
-            "retrieve_appointments", {"phone": _normalize_phone(phone)}
+            "retrieve_appointments", {"phone": _parse_indian_mobile(phone) or phone}
         )
 
     @function_tool
@@ -394,7 +427,7 @@ class HealthAssistantAgent(Agent):
         """
         return await self._run_tool(
             "cancel_appointment",
-            {"phone": _normalize_phone(phone), "date": date, "time": time},
+            {"phone": _parse_indian_mobile(phone) or phone, "date": date, "time": time},
         )
 
     @function_tool
@@ -419,7 +452,7 @@ class HealthAssistantAgent(Agent):
         return await self._run_tool(
             "modify_appointment",
             {
-                "phone": _normalize_phone(phone),
+                "phone": _parse_indian_mobile(phone) or phone,
                 "old_date": old_date,
                 "old_time": old_time,
                 "new_date": new_date,
@@ -461,7 +494,7 @@ async def entrypoint(ctx: JobContext) -> None:
         f"- Current Date (today): {now.strftime('%Y-%m-%d')}\n"
         f"- Tomorrow's Date: {tomorrow}\n"
         f"- Current Time: {now.strftime('%H:%M')}\n"
-        f"- Clinic open days: Monday, Wednesday, Friday only\n"
+        f"- Clinic open: 7 days a week\n"
     )
 
     system_prompt += current_context + (
@@ -469,7 +502,8 @@ async def entrypoint(ctx: JobContext) -> None:
         "1. NEVER output raw function or XML tags like `<function=...>` in your response. "
         "You MUST invoke the native registered tools (identify_user, fetch_slots, book_appointment, end_conversation) directly via the function calling protocol. "
         "Do not type the tool execution as text.\n"
-        "2. Never guess or invent tool arguments (like name or phone). Ask the user if missing.\n"
+        "2. Never guess or invent tool arguments (like name or phone). Ask the user if missing. "
+        "For phone, pass exactly 10 Indian mobile digits (6–9 first digit) without +91.\n"
         "3. NEVER auto-select a booking time. You MUST list available slots and WAIT for the user to explicitly choose one before calling book_appointment.\n"
         "4. NEVER call fetch_slots for today unless the caller asked about today. "
         "When they ask about tomorrow, call fetch_slots with date \"tomorrow\" or tomorrow's YYYY-MM-DD from context.\n"

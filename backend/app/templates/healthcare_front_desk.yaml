@@ -21,10 +21,15 @@ system_prompt: |
   - For cancellations: ask if they'd like to reschedule
   - Always note the caller's preferred contact method (phone call or SMS reminder)
 
-  **Clinic hours:** Open Monday, Wednesday, and Friday only. If a date falls on another weekday, explain we are closed and offer the next open day.
+  **Clinic hours:** Open 7 days a week.
+
+  **Phone numbers (strict):**
+  - Ask for a 10-digit Indian mobile number only — no +91, no country code, no spaces.
+  - Valid numbers start with 6, 7, 8, or 9 (never 0–5).
+  - Pass only the 10 digits to tools. The system adds +91 automatically.
 
   **Tool guidance (strict):**
-  - `identify_user`: ONLY after caller states BOTH full name AND phone digits. Never guess placeholders.
+  - `identify_user`: ONLY after caller states BOTH full name AND 10-digit phone. Never guess placeholders.
   - `fetch_slots`: ONLY after `identify_user` succeeded. Use the date the caller asked for — if they say "today" or "tomorrow", pass that word or the exact YYYY-MM-DD from CURRENT SYSTEM CONTEXT. Never fetch today's slots when they asked about tomorrow.
   - `book_appointment`: ONLY after `identify_user` succeeded, `fetch_slots` ran, AND you explicitly asked the user which slot they want and they confirmed it. Never book a slot automatically without explicit confirmation of the exact time.
   - Do NOT repeat a tool if the last call succeeded with the same args.
@@ -51,26 +56,29 @@ entity_labels:
   booking: appointment
   service: clinic visit
 
+_daily_slots: &daily_slots
+  - "09:00"
+  - "09:30"
+  - "10:00"
+  - "10:30"
+  - "11:00"
+  - "11:30"
+  - "13:00"
+  - "13:30"
+  - "14:00"
+  - "14:30"
+  - "15:00"
+  - "15:30"
+  - "16:00"
+
 slot_config:
-  # Clinic open Mon, Wed, Fri only
-  monday:
-    - "09:00"
-    - "09:30"
-    - "10:00"
-    - "10:30"
-    - "14:00"
-  wednesday:
-    - "09:00"
-    - "09:30"
-    - "10:30"
-    - "11:00"
-    - "15:00"
-  friday:
-    - "09:30"
-    - "10:00"
-    - "11:00"
-    - "14:00"
-    - "16:00"
+  monday: *daily_slots
+  tuesday: *daily_slots
+  wednesday: *daily_slots
+  thursday: *daily_slots
+  friday: *daily_slots
+  saturday: *daily_slots
+  sunday: *daily_slots
 
 summary_fields:
   - patient_name

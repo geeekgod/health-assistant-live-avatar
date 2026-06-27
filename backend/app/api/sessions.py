@@ -82,14 +82,31 @@ async def _dispatch_agent(room_name: str, session_id: str, agent_config: dict) -
 async def list_sessions(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(CallSession).order_by(CallSession.started_at.desc()))
     sessions = result.scalars().all()
-    return [{
-        "session_id": s.id,
-        "template_id": s.template_id,
-        "status": s.status,
-        "summary_status": s.summary_status,
-        "started_at": s.started_at.isoformat() if s.started_at else None,
-        "ended_at": s.ended_at.isoformat() if s.ended_at else None,
-    } for s in sessions]
+    items = []
+    for s in sessions:
+        preview = None
+        if s.summary_json and s.summary_status == "ready":
+            parts = []
+            if name := s.summary_json.get("patient_name"):
+                parts.append(str(name))
+            if complaint := s.summary_json.get("chief_complaint"):
+                parts.append(str(complaint))
+            preview = " · ".join(parts) if parts else None
+        elif s.transcript_json:
+            for entry in reversed(s.transcript_json):
+                if entry.get("role") == "user" and entry.get("text"):
+                    preview = str(entry["text"])[:120]
+                    break
+        items.append({
+            "session_id": s.id,
+            "template_id": s.template_id,
+            "status": s.status,
+            "summary_status": s.summary_status,
+            "started_at": s.started_at.isoformat() if s.started_at else None,
+            "ended_at": s.ended_at.isoformat() if s.ended_at else None,
+            "preview": preview,
+        })
+    return items
 
 @router.get("/sessions/{session_id}")
 async def get_session(session_id: str, db: AsyncSession = Depends(get_db)):

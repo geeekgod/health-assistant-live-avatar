@@ -293,7 +293,7 @@ function CallContent() {
       }
       if (!cancelled) {
         clearSession()
-        router.push(`/summary/${sessionId}`)
+        router.push(`/conversations/${sessionId}`)
       }
     })()
 

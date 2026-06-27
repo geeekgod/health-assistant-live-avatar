@@ -50,6 +50,10 @@ venv.bak/
 backend/health_assistant.db
 backend/liveavatar.db
 
+# Call recordings — ignore audio files, keep directory via .gitkeep
+backend/recordings/*
+!backend/recordings/.gitkeep
+
 # Ruff / Linters
 .ruff_cache/
 .mypy_cache/

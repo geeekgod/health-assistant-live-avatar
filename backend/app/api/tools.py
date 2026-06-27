@@ -13,6 +13,7 @@ from app.config import settings
 from app.api.summaries import generate_summary_with_llm
 from app.db.database import get_db
 from app.db.models import Booking, CallSession, Contact, ToolEvent
+from app.phone_utils import format_indian_phone, parse_indian_mobile, phone_lookup_variants, to_e164_india
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -31,23 +32,20 @@ def _load_template_data(template_id: str) -> dict:
         pass
     return {}
 
-def _slots_for_date(template_data: dict, date_str: str) -> tuple[list[str], str]:
-    """Return (slots, weekday_name) for a date. Empty slots means clinic closed that day."""
+def _slots_for_date(template_data: dict, date_str: str) -> list[str]:
     try:
-        weekday = dt.datetime.strptime(date_str, "%Y-%m-%d").strftime("%A")
-        weekday_key = weekday.lower()
+        weekday_key = dt.datetime.strptime(date_str, "%Y-%m-%d").strftime("%A").lower()
     except ValueError:
-        return DEFAULT_SLOTS, ""
+        return DEFAULT_SLOTS
 
     slot_config = template_data.get("slot_config")
     if not slot_config:
-        return DEFAULT_SLOTS, weekday
+        return DEFAULT_SLOTS
 
     slots = slot_config.get(weekday_key)
     if slots is None:
-        return [], weekday
-    return list(slots), weekday
-
+        return DEFAULT_SLOTS
+    return list(slots)
 
 def _resolve_date_str(date_str: str | None, local_now: dt.datetime) -> str:
     local_today = local_now.strftime("%Y-%m-%d")
@@ -59,6 +57,29 @@ def _resolve_date_str(date_str: str | None, local_now: dt.datetime) -> str:
     if normalized == "tomorrow":
         return (local_now + dt.timedelta(days=1)).strftime("%Y-%m-%d")
     return date_str.strip()
+
+def _format_tool_args(args: Dict[str, Any]) -> Dict[str, Any]:
+    out = dict(args)
+    if "phone" in out and out["phone"] is not None:
+        formatted = format_indian_phone(str(out["phone"]))
+        if formatted:
+            out["phone"] = formatted
+    return out
+
+def _format_tool_result(result: dict) -> dict:
+    out = dict(result)
+    if "phone" in out and out["phone"] is not None:
+        formatted = format_indian_phone(str(out["phone"]))
+        if formatted:
+            out["phone"] = formatted
+    return out
+
+async def _find_contact(db: AsyncSession, phone_raw: str | None) -> Contact | None:
+    for variant in phone_lookup_variants(phone_raw):
+        query = await db.execute(select(Contact).where(Contact.phone == variant))
+        if contact := query.scalar_one_or_none():
+            return contact
+    return None
 
 class ToolExecuteRequest(BaseModel):
     session_id: str
@@ -90,14 +111,28 @@ async def execute_tool(
     if req.tool_name == "identify_user":
         phone = req.args.get("phone")
         name = req.args.get("name")
-        query = await db.execute(select(Contact).where(Contact.phone == phone))
-        contact = query.scalar_one_or_none()
-        if not contact:
-            contact = Contact(phone=phone, name=name)
-            db.add(contact)
-            await db.commit()
-            await db.refresh(contact)
-        result = {"contact_id": contact.id, "name": contact.name, "message": "User identified"}
+        ten = parse_indian_mobile(phone)
+        if not ten:
+            result = {
+                "error": (
+                    "Invalid Indian mobile number. Must be exactly 10 digits "
+                    "starting with 6, 7, 8, or 9 — without +91."
+                )
+            }
+        else:
+            stored = to_e164_india(ten)
+            contact = await _find_contact(db, phone)
+            if not contact:
+                contact = Contact(phone=stored, name=name)
+                db.add(contact)
+                await db.commit()
+                await db.refresh(contact)
+            result = {
+                "contact_id": contact.id,
+                "name": contact.name,
+                "phone": stored,
+                "message": "User identified",
+            }
 
     elif req.tool_name == "fetch_slots":
         local_now = dt.datetime.now()
@@ -105,7 +140,7 @@ async def execute_tool(
         local_today = local_now.strftime("%Y-%m-%d")
 
         template_data = _load_template_data(db_session.template_id)
-        all_slots, weekday_name = _slots_for_date(template_data, date_str)
+        all_slots = _slots_for_date(template_data, date_str)
 
         query = await db.execute(select(Booking).where(
             Booking.template_id == db_session.template_id, Booking.date == date_str, Booking.status == "active"
@@ -122,12 +157,7 @@ async def execute_tool(
             available.append(dt.datetime.strptime(s, "%H:%M").strftime("%I:%M %p").lstrip("0"))
 
         result = {"date": date_str, "available_slots": available}
-        if not all_slots and weekday_name:
-            result["message"] = (
-                f"The clinic is closed on {weekday_name}s. "
-                "We are open Monday, Wednesday, and Friday."
-            )
-        elif not available and all_slots:
+        if not available and all_slots:
             result["message"] = "All slots are booked for this date."
 
     elif req.tool_name == "book_appointment":
@@ -141,9 +171,8 @@ async def execute_tool(
         try:
             time_str = dt.datetime.strptime(time_str, "%I:%M %p").strftime("%H:%M")
         except (ValueError, TypeError): pass
-        
-        query = await db.execute(select(Contact).where(Contact.phone == phone))
-        contact = query.scalar_one_or_none()
+
+        contact = await _find_contact(db, phone)
 
         if not contact:
             result = {"error": "User not found, call identify_user first"}
@@ -159,8 +188,8 @@ async def execute_tool(
                 result = {"status": "success", "message": f"Appointment booked for {date_str} at {time_str}"}
 
     elif req.tool_name == "retrieve_appointments":
-        query = await db.execute(select(Contact).where(Contact.phone == req.args.get("phone")))
-        if not (contact := query.scalar_one_or_none()):
+        contact = await _find_contact(db, req.args.get("phone"))
+        if not contact:
             result = {"error": "User not found, call identify_user first"}
         else:
             q2 = await db.execute(select(Booking).where(Booking.contact_id == contact.id, Booking.template_id == db_session.template_id, Booking.status == "active"))
@@ -171,8 +200,8 @@ async def execute_tool(
         try:
             t_str = dt.datetime.strptime(t_str, "%I:%M %p").strftime("%H:%M")
         except (ValueError, TypeError): pass
-        query = await db.execute(select(Contact).where(Contact.phone == phone))
-        if not (contact := query.scalar_one_or_none()):
+        contact = await _find_contact(db, phone)
+        if not contact:
             result = {"error": "User not found"}
         else:
             q2 = await db.execute(select(Booking).where(Booking.contact_id == contact.id, Booking.template_id == db_session.template_id, Booking.date == d_str, Booking.time == t_str, Booking.status == "active"))
@@ -190,8 +219,8 @@ async def execute_tool(
         try: n_time = dt.datetime.strptime(n_time, "%I:%M %p").strftime("%H:%M")
         except (ValueError, TypeError): pass
 
-        query = await db.execute(select(Contact).where(Contact.phone == phone))
-        if not (contact := query.scalar_one_or_none()):
+        contact = await _find_contact(db, phone)
+        if not contact:
             result = {"error": "User not found"}
         else:
             q_conflict = await db.execute(select(Booking).where(Booking.template_id == db_session.template_id, Booking.date == n_date, Booking.time == n_time, Booking.status == "active"))
@@ -216,7 +245,13 @@ async def execute_tool(
     else:
         result = {"error": "Unknown tool"}
 
-    db.add(ToolEvent(session_id=req.session_id, tool_name=req.tool_name, args=req.args, result=result, status="success" if not result.get("error") else "error"))
+    db.add(ToolEvent(
+        session_id=req.session_id,
+        tool_name=req.tool_name,
+        args=_format_tool_args(req.args),
+        result=_format_tool_result(result),
+        status="success" if not result.get("error") else "error",
+    ))
     await db.commit()
 
     if should_summarize:

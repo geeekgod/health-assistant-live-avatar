@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import { Loader2, Wrench } from 'lucide-react'
+import { formatToolPayload } from '@/lib/phone'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 
@@ -51,6 +52,15 @@ export default function ToolActivityFeed({ events, toolLabels }: ToolActivityFee
           ) : (
             events.map((event, i) => {
               const args = event.result?.args as Record<string, unknown> | undefined
+              const displayArgs = args ? formatToolPayload(args) : undefined
+              const displayResult =
+                event.status !== 'running' && event.result
+                  ? formatToolPayload(
+                      Object.fromEntries(
+                        Object.entries(event.result).filter(([k]) => k !== 'args'),
+                      ),
+                    )
+                  : undefined
               return (
                 <div
                   key={`${event.tool}-${event.timestamp}-${i}`}
@@ -72,9 +82,14 @@ export default function ToolActivityFeed({ events, toolLabels }: ToolActivityFee
                       )}
                     </Badge>
                   </div>
-                  {args && Object.keys(args).length > 0 && (
+                  {displayArgs && Object.keys(displayArgs).length > 0 && (
                     <pre className="mt-2 overflow-x-auto rounded-md bg-black/30 p-2 text-[10px] text-muted-foreground">
-                      {JSON.stringify(args, null, 2)}
+                      {JSON.stringify(displayArgs, null, 2)}
+                    </pre>
+                  )}
+                  {displayResult && Object.keys(displayResult).length > 0 && (
+                    <pre className="mt-2 overflow-x-auto rounded-md bg-black/30 p-2 text-[10px] text-emerald-200/80">
+                      {JSON.stringify(displayResult, null, 2)}
                     </pre>
                   )}
                 </div>

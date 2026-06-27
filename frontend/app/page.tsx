@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -117,6 +118,12 @@ export default function LobbyPage() {
           <Button className="w-full" size="lg" onClick={() => void handleStart()} disabled={loading}>
             {loading ? 'Starting session…' : 'Start call'}
           </Button>
+
+          <p className="text-center text-sm text-muted-foreground">
+            <Link href="/conversations" className="text-primary hover:underline">
+              View past conversations
+            </Link>
+          </p>
         </CardContent>
       </Card>
     </main>
