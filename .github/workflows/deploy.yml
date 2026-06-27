@@ -12,6 +12,7 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - name: SSH deploy (git pull + docker build + blue-green)
         uses: appleboy/ssh-action@v1.2.0

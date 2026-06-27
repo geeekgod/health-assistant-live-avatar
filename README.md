@@ -74,6 +74,8 @@ One workflow: [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)
 
 On push to `main` (or manual run), it SSHs to your server, runs `git pull`, then `docker/scripts/deploy.sh` (build + blue-green).
 
-**Secrets:** `SSH_HOST`, `SSH_USER`, `SSH_PRIVATE_KEY` — optional: `SSH_PORT`, `DEPLOY_PATH`, `LIVEKIT_MODE`
+**Secrets:** Add under **Settings → Environments → production** (or repository secrets):
+
+`SSH_HOST`, `SSH_USER`, `SSH_PRIVATE_KEY` — optional: `SSH_PORT`, `DEPLOY_PATH`, `LIVEKIT_MODE`
 
 See **[docs/DEPLOY.md](docs/DEPLOY.md)** for SSH key setup and server bootstrap.

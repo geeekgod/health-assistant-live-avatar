@@ -57,7 +57,7 @@ ssh -i ~/.ssh/github_actions_deploy USER@YOUR_SERVER_IP
 
 ## GitHub repository secrets
 
-Go to **Settings → Secrets and variables → Actions → New repository secret**:
+Go to **Settings → Environments → production → Environment secrets** (or repository secrets):
 
 | Secret | Required | Example |
 |--------|----------|---------|
