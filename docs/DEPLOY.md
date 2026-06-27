@@ -4,8 +4,8 @@ Deploys to `/var/www/mykare-assessment/health-assistant-live-avatar` on push to 
 
 ## Workflows
 
-| File | Trigger | What it does |
-|------|---------|--------------|
+| File                           | Trigger                   | What it does                                  |
+| ------------------------------ | ------------------------- | --------------------------------------------- |
 | `.github/workflows/deploy.yml` | Push to `main`, or manual | SSH → `git pull` → `docker/scripts/deploy.sh` |
 
 ## One-time server setup
@@ -59,21 +59,21 @@ ssh -i ~/.ssh/github_actions_deploy USER@YOUR_SERVER_IP
 
 Go to **Settings → Environments → production → Environment secrets** (or repository secrets):
 
-| Secret | Required | Example |
-|--------|----------|---------|
-| `SSH_HOST` | Yes | `203.0.113.10` or `myserver.example.com` |
-| `SSH_USER` | Yes | `ubuntu` or your deploy user |
-| `SSH_PRIVATE_KEY` | Yes | Full private key (`-----BEGIN OPENSSH PRIVATE KEY-----` …) |
-| `SSH_PORT` | No | `22` |
-| `DEPLOY_PATH` | No | `/var/www/mykare-assessment/health-assistant-live-avatar` |
-| `LIVEKIT_MODE` | No | `cloud` (default), `local`, or `off` |
+| Secret            | Required | Example                                                    |
+| ----------------- | -------- | ---------------------------------------------------------- |
+| `SSH_HOST`        | Yes      | `203.0.113.10` or `myserver.example.com`                   |
+| `SSH_USER`        | Yes      | `ubuntu` or your deploy user                               |
+| `SSH_PRIVATE_KEY` | Yes      | Full private key (`-----BEGIN OPENSSH PRIVATE KEY-----` …) |
+| `SSH_PORT`        | No       | `22`                                                       |
+| `DEPLOY_PATH`     | No       | `/var/www/mykare-assessment/health-assistant-live-avatar`  |
+| `LIVEKIT_MODE`    | No       | `cloud` (default), `local`, or `off`                       |
 
 Optional: create a **production** environment under **Settings → Environments** and require approval before deploy.
 
 ## Blue-green ports
 
 | Color | Frontend | Backend |
-|-------|----------|---------|
+| ----- | -------- | ------- |
 | blue  | 3000     | 8000    |
 | green | 3002     | 8002    |
 
@@ -108,12 +108,12 @@ LIVEKIT=cloud bash docker/scripts/deploy.sh
 
 ## Health checks & autoheal
 
-| Service | Health endpoint / check |
-|---------|-------------------------|
-| backend | `GET /health` (liveness), `GET /health/ready` (DB + readiness) |
-| frontend | `GET /api/health` |
-| agent | process check (`livekit_worker.worker`) |
-| livekit | HTTP probe on `:7880` (self-hosted profile only) |
+| Service  | Health endpoint / check                                        |
+| -------- | -------------------------------------------------------------- |
+| backend  | `GET /health` (liveness), `GET /health/ready` (DB + readiness) |
+| frontend | `GET /api/health`                                              |
+| agent    | process check (`livekit_worker.worker`)                        |
+| livekit  | HTTP probe on `:7880` (self-hosted profile only)               |
 
 All app containers are labelled `autoheal=true`. Deploy and `make docker-up DETACH=1` start a singleton [willfarrell/autoheal](https://hub.docker.com/r/willfarrell/autoheal) container that watches Docker health status and restarts unhealthy containers.
 
