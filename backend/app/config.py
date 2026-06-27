@@ -1,4 +1,9 @@
+import os
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_BACKEND_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
@@ -13,6 +18,7 @@ class Settings(BaseSettings):
     # Auth & System
     WORKER_API_SECRET: str = "dev-worker-secret"
     DATABASE_URL: str = "sqlite+aiosqlite:///./health_assistant.db"
+    RECORDINGS_DIR: str = os.path.join(_BACKEND_ROOT, "recordings")
     BACKEND_URL: str = "http://localhost:8000"
     
     # LiveKit

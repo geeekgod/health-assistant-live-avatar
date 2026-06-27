@@ -27,7 +27,10 @@ from .avatar import start_avatar
 from .gemini_tts import GeminiTTS
 
 _ROOT = os.path.join(os.path.dirname(__file__), "..", "..")
-RECORDINGS_DIR = os.path.join(_ROOT, "backend", "recordings")
+RECORDINGS_DIR = os.getenv(
+    "RECORDINGS_DIR",
+    os.path.join(_ROOT, "backend", "recordings"),
+)
 load_dotenv()
 load_dotenv(os.path.join(_ROOT, ".env"))
 load_dotenv(os.path.join(_ROOT, "backend", ".env"))

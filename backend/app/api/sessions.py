@@ -21,7 +21,6 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "..", "templates")
-RECORDINGS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "recordings")
 AGENT_NAME = "health-assistant"
 
 class CreateSessionRequest(BaseModel):
@@ -205,8 +204,8 @@ async def upload_recording(
     if len(data) < 100:
         raise HTTPException(status_code=400, detail="Recording too short or empty")
 
-    os.makedirs(RECORDINGS_DIR, exist_ok=True)
-    path = os.path.join(RECORDINGS_DIR, f"{session_id}{ext}")
+    os.makedirs(settings.RECORDINGS_DIR, exist_ok=True)
+    path = os.path.join(settings.RECORDINGS_DIR, f"{session_id}{ext}")
     with open(path, "wb") as handle:
         handle.write(data)
 

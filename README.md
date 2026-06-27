@@ -9,3 +9,59 @@ make dev-backend
 make dev-agent
 make dev-frontend
 ```
+
+Or all at once:
+
+```bash
+make dev
+```
+
+## Docker
+
+All Docker assets live under [`docker/`](docker/):
+
+| Path | Purpose |
+|------|---------|
+| `docker/compose.yml` | Service orchestration |
+| `docker/livekit.yaml` | Self-hosted LiveKit config |
+| `docker/.env.example` | Environment template |
+| `docker/frontend/Dockerfile` | Next.js standalone (distroless, &lt;100 MB target) |
+| `docker/backend/Dockerfile` | FastAPI + uv multi-stage |
+| `docker/agent/Dockerfile` | LiveKit agent worker |
+| `docker/scripts/compose.sh` | Compose helper used by Makefile |
+
+```bash
+cp docker/.env.example docker/.env   # first time only (auto-copied on docker-up)
+
+# Full stack with local LiveKit (default)
+make docker-build LIVEKIT=local
+make docker-up LIVEKIT=local
+
+# LiveKit Cloud — set wss:// URL + keys in docker/.env
+make docker-up LIVEKIT=cloud
+
+# Frontend + backend only (no agent, no LiveKit)
+make docker-up LIVEKIT=off
+
+# Run detached
+make docker-up LIVEKIT=local DETACH=1
+
+make docker-down LIVEKIT=local
+make docker-logs LIVEKIT=local
+```
+
+Open **http://localhost:3000** (frontend) and **http://localhost:8000/docs** (API).
+
+**Profiles**
+
+| `LIVEKIT` | Services started |
+|-----------|------------------|
+| `local` | livekit, backend, agent, frontend |
+| `cloud` | backend, agent, frontend (external LiveKit URL in `.env`) |
+| `off` | backend, frontend only |
+
+**Notes**
+
+- `NEXT_PUBLIC_API_URL` is baked in at frontend **build** time — rebuild after changing it.
+- Browser clients use `LIVEKIT_URL` from `docker/.env`; the agent uses `LIVEKIT_INTERNAL_URL` (`ws://livekit:7880` when local).
+- Recordings and SQLite DB persist in Docker volumes (`recordings`, `app-data`).

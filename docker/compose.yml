@@ -1,0 +1,78 @@
+name: health-assistant
+
+services:
+  livekit:
+    image: livekit/livekit-server:latest
+    profiles: [self-hosted]
+    command: --config /etc/livekit.yaml --dev
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: ../docker/backend/Dockerfile
+    profiles: [self-hosted, cloud, core]
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: sqlite+aiosqlite:////data/health_assistant.db
+      RECORDINGS_DIR: /data/recordings
+      BACKEND_URL: ${BACKEND_URL:-http://localhost:8000}
+      LIVEKIT_URL: ${LIVEKIT_URL:-ws://localhost:7880}
+    volumes:
+      - app-data:/data
+      - recordings:/data/recordings
+    depends_on:
+      livekit:
+        condition: service_started
+        required: false
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/docs')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  agent:
+    build:
+      context: ../agent
+      dockerfile: ../docker/agent/Dockerfile
+    profiles: [self-hosted, cloud]
+    env_file:
+      - .env
+    environment:
+      BACKEND_URL: http://backend:8000
+      LIVEKIT_URL: ${LIVEKIT_INTERNAL_URL:-ws://livekit:7880}
+      RECORDINGS_DIR: /data/recordings
+    volumes:
+      - recordings:/data/recordings
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: ../docker/frontend/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+    profiles: [self-hosted, cloud, core]
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  app-data:
+  recordings:

@@ -9,6 +9,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
+from app.config import settings
 from app.db.database import get_db
 from app.db.models import CallSession, ToolEvent
 from app.providers.llm.groq_client import GroqClient
@@ -17,7 +18,6 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "..", "templates")
-RECORDINGS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "recordings")
 
 DEFAULT_SUMMARY_FIELDS = [
     "identified_user",
@@ -40,7 +40,7 @@ def _load_template_data(template_id: str) -> dict:
 
 def _find_recording_path(session_id: str) -> str | None:
     for ext in (".ogg", ".wav", ".mp3", ".webm"):
-        path = os.path.join(RECORDINGS_DIR, f"{session_id}{ext}")
+        path = os.path.join(settings.RECORDINGS_DIR, f"{session_id}{ext}")
         if os.path.isfile(path):
             return path
     return None
