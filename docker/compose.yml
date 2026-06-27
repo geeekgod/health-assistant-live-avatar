@@ -1,9 +1,16 @@
+# yaml-language-server: $schema=./compose-spec.json
+
 name: health-assistant
+
+x-timezone: &timezone
+  TZ: Asia/Kolkata
 
 services:
   livekit:
     image: livekit/livekit-server:latest
     profiles: [self-hosted]
+    environment:
+      <<: *timezone
     command: --config /etc/livekit.yaml --dev
     ports:
       - "7880:7880"
@@ -14,14 +21,15 @@ services:
 
   backend:
     build:
-      context: ../backend
-      dockerfile: ../docker/backend/Dockerfile
+      context: ..
+      dockerfile: docker/backend/Dockerfile
     profiles: [self-hosted, cloud, core]
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     env_file:
       - .env
     environment:
+      <<: *timezone
       DATABASE_URL: sqlite+aiosqlite:////data/health_assistant.db
       RECORDINGS_DIR: /data/recordings
       BACKEND_URL: ${BACKEND_URL:-http://localhost:8000}
@@ -43,12 +51,13 @@ services:
 
   agent:
     build:
-      context: ../agent
-      dockerfile: ../docker/agent/Dockerfile
+      context: ..
+      dockerfile: docker/agent/Dockerfile
     profiles: [self-hosted, cloud]
     env_file:
       - .env
     environment:
+      <<: *timezone
       BACKEND_URL: http://backend:8000
       LIVEKIT_URL: ${LIVEKIT_INTERNAL_URL:-ws://livekit:7880}
       RECORDINGS_DIR: /data/recordings
@@ -66,6 +75,8 @@ services:
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     profiles: [self-hosted, cloud, core]
+    environment:
+      <<: *timezone
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
     depends_on:

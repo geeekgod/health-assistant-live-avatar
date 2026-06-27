@@ -1,0 +1,18 @@
+# Repo-root context for docker/backend and docker/agent Dockerfiles
+.git
+**/.venv
+**/__pycache__
+**/*.py[cod]
+**/.env
+**/.env.*
+**/node_modules
+**/.next
+backend/recordings/*
+!backend/recordings/.gitkeep
+**/*.db
+**/.pytest_cache
+**/.ruff_cache
+**/.mypy_cache
+frontend/out
+agent-transcripts
+.cursor
